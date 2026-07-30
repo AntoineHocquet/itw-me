@@ -1,0 +1,11 @@
+# Phase 3. Prometheus scrapes your app's /metrics endpoint.
+# Note the pull model: your app never sends anything to Prometheus;
+# Prometheus comes and reads this endpoint every scrape_interval.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "itw-me"
+    static_configs:
+      # "app" will be the docker-compose service name of your API
+      - targets: ["app:8000"]
