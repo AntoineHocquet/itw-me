@@ -30,10 +30,10 @@ domain (ports); only infrastructure/container.py imports adapters.
 ## Build order
 
 Phase 1 (works offline, no keys):
-- [ ] Implement InterviewService.ask_question
-- [ ] Un-skip the second test, make it pass
-- [ ] Implement the /questions endpoint against a fake generator
-- [ ] `pip install -e ".[dev]" && pytest` green,
+- [x] Implement InterviewService.ask_question
+- [x] Un-skip the second test, make it pass
+- [x] Implement the /questions endpoint against a fake generator
+- [x] `pip install -e ".[dev]" && pytest` green,
       `uvicorn itw_me.adapters.inbound.api:app` answering canned text
 
 Phase 2 (real RAG):

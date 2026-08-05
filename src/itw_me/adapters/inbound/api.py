@@ -34,10 +34,24 @@ def start_interview():
 
 @app.post("/interviews/{interview_id}/questions", response_model=AskResponse)
 def ask(interview_id: str, req: AskRequest):
-    """TODO(antoine): call service.ask_question, map the Answer to
-    AskResponse, and translate domain errors (unknown interview id)
-    into a 404. Note the pattern: try/except around the service call,
-    raise HTTPException in the except. The domain raises ValueError
-    or its own exceptions; it never imports HTTPException.
+    """Translate HTTP <-> domain, nothing more.
+
+    The pattern: try/except around the service call, HTTPException
+    only in the except. InterviewService.ask_question raises a plain
+    ValueError when the interview id is unknown -- that's a domain-level
+    fact ("this aggregate does not exist"), and it's this adapter's job,
+    not the domain's, to know that the HTTP vocabulary for that is 404.
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        answer = service.ask_question(interview_id, req.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # DTO mapping: the API's response shape (AskResponse) is deliberately
+    # its own type, not the domain's Answer. Citation is rendered as the
+    # "[source_file#chunk_id]" label that phase 2's prompt will also use,
+    # so visitors and the LLM see the same reference format.
+    return AskResponse(
+        answer=answer.text,
+        citations=[f"{c.source_file}#{c.chunk_id}" for c in answer.citations],
+    )

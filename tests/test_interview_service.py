@@ -47,7 +47,6 @@ def test_start_interview_persists_it(service: InterviewService):
     assert service._repository.get(interview.id) is not None
 
 
-@pytest.mark.skip(reason="Enable once ask_question is implemented")
 def test_ask_question_records_exchange(service: InterviewService):
     interview = service.start_interview()
     answer = service.ask_question(interview.id, "Where do you work?")
