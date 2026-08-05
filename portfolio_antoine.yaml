@@ -1,0 +1,919 @@
+
+
+# EDUCATION -> \cvedu{period}{title}{institution}{description}
+# NOTE: 'title' serves as education degree
+education:
+- period: 2024
+  title: Applied Data Science Program (Professional Certificate)
+  institution: MIT Professional Education
+  description: |-
+    Completed an intensive 12 weeks mentor-led program focused on real-world AI applications.
+    Gained experience in data analysis, supervised and unsupervised learning, time series,
+    network analysis, deep learning, and recommender systems.
+    \newline\textbf{Stack:}
+    Data wrangling, feature engineering, decision trees, time series forecasting, neural networks,
+    recommender systems, network analysis, model evaluation.
+    Python's foundational libraries (\texttt{Pandas}, \texttt{scikit-learn}, etc.); also: \texttt{statsmodels}, \texttt{NetworkX}, \texttt{TensorFlow}, \texttt{Keras}, \texttt{Surprise}.
+- period: 2012--2016
+  title: Ph.D.\ in Applied Mathematics – Highest Distinction
+  institution: École Polytechnique, France
+  description: |-
+    Doctoral thesis on the stochastic Landau–Lifshitz–Gilbert equation under Gaussian noise, combining probability theory, partial differential equations, and numerical analysis.
+    Successfully defended with highest honors (*félicitations du jury*), resulting in three peer-reviewed publications with significant impact.
+    Developed expertise in high-performance scientific computing using MATLAB, Python, and FreeFem++.
+    Completed a structured pedagogical training component through 64 hours/year of teaching duties (graduate tutorials in numerical analysis and supervision of Bachelor-level projects), fulfilling the *agrégation* teaching practicum and formal qualification for permanent secondary or higher education positions in France.
+- period: 2011--2012
+  title: Master’s degree in Mathematics – Highest Honors
+  institution: École Normale Supérieure (ENS Cachan, Bretagne campus), France
+  description: Admitted through a highly competitive national examination in Spring 2011
+    to one of France’s top graduate schools.
+- period: '2011'
+  title: Higher Education Teaching Certification (“Agrégation”)
+  institution: Universit\'e d'Orsay
+  description: French national advanced teaching qualification in mathematics.
+- period: 2008--2010
+  title: Bachelor of Science, Health \& Technology
+  institution: Orsay University, France
+  description: ''
+- period: 2005--2007
+  title: Classe préparatoire aux grandes écoles
+  institution: MPSI Lycée Sainte-Marie d'Antony, MP Lycée Lakanal, Sceaux
+  description: ''
+
+# EXPERIENCE -> \cvexp{period}{title}{institution}{description}
+# NOTE: 'title' serves as job title, 'institution'  is the company name
+experience:
+- period: 2022--2024
+  title: Postdoc
+  institution: Technische Universit\"at Berlin
+  description: |-
+    Project entitled ``Rough Stochastic Analysis'' --
+    Supervision: Peter Friz.
+    Teaching: graduate course ``Rough Stochastic McKean--Vlasov Equations'', TUB.
+    Seminar: Stochastic Analysis, Rough paths and applications in Data Science.
+    Grant prospect.
+- period: 2019--2022
+  title: Postdoc
+  institution: Technische Universit\"at Berlin
+  description: |-
+    Project entitled ``Control of Stochastic mean-field equations with applications to brain networks'' --
+    Supervision: Wilhelm Stannat.
+    Teaching: graduate course ``Numerics for Stochastic Partial Differential Equations'',  Berlin Mathematical school
+    Seminar: Stochastic PDEs and applications, TUB
+    Workshop organization (Scholarship), Bonn University.
+- period: 2016--2019
+  title: Postdoc
+  institution: Technische Universit\"at Berlin
+  description: |-
+    Project funded by the German Research Foundation, entitled ``Rough Paths, Stochastic Partial Differential Equations and Related Topics''
+    Supervision: Peter K.~Friz, Martina Hofmanov\'a, Wilhelm Stannat.
+    Teaching: master theses supervision.
+- period: 2012--2016
+  title: PhD Candidate \& Teaching Assistant
+  institution: École Polytechnique, Centre de Mathématiques Appliquées, Palaiseau,
+    France
+  description: |-
+    Conducted original research on the stochastic Landau–Lifshitz–Gilbert equation under Gaussian noise, integrating probability theory, partial differential equations, and numerical analysis.
+    Designed and implemented high-performance simulations in MATLAB, Python, and FreeFem++.
+    Published three peer-reviewed articles and presented findings at international conferences.
+    Delivered 64 hours/year of teaching: exercise sessions, graduate-level numerical analysis tutorials, and supervision of Bachelor and Master theses.
+
+# PUBLICATIONS -> \cvpub{citation}{abstract}{url}
+# NOTE:
+# 'citation' is the full citation of the work, 
+# 'abstract' is a brief summary
+publications:
+- citation: A.~ Hocquet.The Landau-Lifshitz-Gilbert equation driven by Gaussian noise.
+    PhD thesis, École Polytechnique, 2015.
+  abstract: |-
+    This thesis is devoted to the influence of a noise term in the stochastic Landau-Lifshitz-Gilbert Equation (SLLG). It is
+    a nonlinear stochastic partial differential equation with a non-convex constraint on the modulus of the solutions.
+    First, we study in chapter 1 the question of local solvability. Using classical properties of stochastic integration
+    with Banach space-valued processes, we propose a mild formulation, and give the existence and uniqueness of a local
+    solution in any dimension, for a Gaussian noise, regular in space. Secondly, we focus on the specific study of SLLG
+    in a two-dimensional space domain. Chapter 2 deals with the existence of a strong solution, in the probabilistic sense.
+    Using the energy formula, we give a method to obtain uniquely a global solution in time. Chapter 3 gives uniqueness of
+    weak solutions, provided that the energy satisfies a super-martingale property. This is the stochastic counterpart of
+    a known deterministic result giving the uniqueness of weak solutions, knowing that the energy decreases. Chapter 4
+    gives the existence, in the so-called ``overdamped case'', of solutions that blow-up in finite time. We prove that,
+    unlike the deterministic case, a singularity may appear with positive probability, regardless of the initial data chosen.
+    Then we return to the case of general dimension of space, providing in chapter 5 a new time semi-discrete scheme for SLLG.
+    This chapter is based on an article in collaboration with F. Alouges and A. De Bouard. We show the convergence in law
+    of a projection-type scheme for SLLG, which has the advantage of respecting exactly the local constraint on the magnitude.
+    This scheme treats the case of a rather general noise term regularized in space but infinite-dimensional.
+    In Chapter 6, we show how to implement it with a finite element dicretization in space, and we give a practical method
+    for approaching a regular noise in this framework. We also evidence numerical blow-up of the solutions, despite the presence
+    of a gyromagnetic term, and of a more general noise than that of Chapter 4.
+  url: https://hal.science/tel-01265433/
+- citation: |-
+    F.~Alouges and A.~De Bouard and A.~Hocquet.
+    A semi-discrete scheme for the Stochastic Landau-Lifshitz equation,
+    \textit{Stochastic Partial Differential Equations: Analysis and Computations}, \textbf{2}(3):281--315, 2014.
+  abstract: |-
+    A new convergent time semi-discrete scheme for the stochastic Landau–Lifshitz–Gilbert equation is investigated. The scheme is only
+    linearly implicit and does not require the resolution of a nonlinear problem at each time step. Using a martingale approach,
+    we prove the convergence in law of the scheme up to a subsequence.
+  url: https://link.springer.com/article/10.1007/s40072-014-0033-7
+- citation: |-
+    A.~Hocquet.
+    Struwe-like solutions of the stochastic harmonic map flow,
+    \textit{Journal of Evolution Equations}, \textbf{18}(3)1189--1228, 2018.
+  abstract: |-
+    New results on the well-posedness of the two-dimensional Stochastic Harmonic Map flow are obtained. The study of this evolution equation (SPDE) is motivated by the
+    Landau–Lifshitz–Gilbert model for thermal fluctuations in micromagnetics. We first construct strong solutions that are locally
+    as regular as permitted by the data. It that sense, these maps are a counterpart of the so-called “Struwe solutions” of the
+    deterministic model. We then provide a natural criterion of uniqueness that extends A. Freire’s Theorem to the stochastic case.
+    Both results are obtained under the condition that the noise term has a trace-class covariance in space.
+  url: https://link.springer.com/article/10.1007/s00028-018-0437-3
+- citation: |-
+    A.~Hocquet and M.~Hofmanov\'a.
+    An energy method for rough partial differential equations.
+    \textit{Journal of Differential Equations}, \textbf{265}(4):1407--1466, 2018.
+  abstract: |-
+    A well-posedness and stability result for a class of nondegenerate linear parabolic equations driven by geometric
+    rough paths is presented. More precisely, we introduce a notion of weak solution that satisfies an intrinsic formulation of the equation
+    in a suitable Sobolev space of negative order. Weak solutions are then shown to satisfy the corresponding energy estimates
+    which are deduced directly from the equation. Existence is obtained by showing compactness of a suitable sequence of approximate
+    solutions whereas uniqueness relies on a doubling of variables argument and a careful analysis of the passage to the diagonal.
+    Our result is optimal in the sense that the assumptions on the deterministic part of the equation as well as the initial condition
+    are the same as in the classical PDEs theory.
+  url: https://www.sciencedirect.com/science/article/pii/S002203961830189X
+- citation: |-
+    A.~Hocquet.
+    Finite-time singularity of the stochastic harmonic map flow,
+    \textit{Annales de l'Institut Henri Poincar\'e, Probabilit\'es et Statistiques,} \textbf{55}(2):1011--1041
+    Institut Henri Poincar\'e, 2019.
+  abstract: |-
+    The influence of an infinite dimensional Gaussian noise on the bubbling phenomenon for the stochastic harmonic map flow
+    from the two-dimensional unit disc onto the sphere is investigated. The diffusion term is assumed to have range one pointwisely in the tangent space,
+    so that the noise preserves the 1-corotational symmetry of solutions. Under the assumption that its space-correlation is of trace class
+    (in some appropriate Hilbert space), it is proved that the noise generates blow-up with positive probability. This scenario happens
+    no matter how the initial data is chosen, provided it fulfills the latter symmetry assumption.
+  url: https://projecteuclid.org/euclid.aihp/1557820840
+- citation: |-
+    A.~Hocquet, T.~Nilssen and W.~Stannat.
+    Generalized Burgers equation with rough transport noise.
+    \textit{Stochastic Processes and their Applications}, \textbf{130}(4):2159--2184, 2020.
+  abstract: |-
+    A new technique for studying well posedness and energy estimates for evolution equations with a rough transport term is introduced.
+    The technique is based on finding suitable space–time weight functions for the equations at hand. As an example, the well posedness
+    of the generalized viscous Burgers equation perturbed by a rough path transport noise is studied.
+  url: https://www.sciencedirect.com/science/article/abs/pii/S030441491830721X
+- citation: |-
+    A.~Hocquet and T.~Nilssen.
+    An It\^o formula for rough partial differential equations and some applications.
+    \textit{Potential Analysis}, \textbf{53}(1):1--56, 2020.
+  abstract: |-
+    Existence, uniqueness and regularity for solutions of rough parabolic equations with a rough transport term is established.
+    To do so, we introduce a concept of “differential rough driver”, which comes with a counterpart of the usual controlled paths spaces
+    in rough paths theory, built on Sobolev spaces. We also define a natural notion of geometricity in this context, and show how it relates
+    to a product formula for controlled paths. In the case of pure transport noise, we use this framework to prove an It\^o Formula (in the sense
+    of a chain rule) for Nemytskii operators. Our method is based on energy estimates, and a generalization of the Moser Iteration argument to
+    prove boundedness of a dense class of solutions of parabolic problems as above. In particular, we avoid the use of flow transformations
+    and work directly at the level of the original equation. As an application of these results, we prove existence and uniqueness of a suitable
+    class of Lp-solutions of parabolic equations with multiplicative noise. Another related development is the homogeneous Dirichlet boundary
+    problem on a smooth domain, for which a weak maximum principle is shown under appropriate assumptions on the coefficients.
+  url: https://doi.org/10.1007/s11118-020-09830-y
+- citation: |-
+    A.~Hocquet.
+    Quasilinear rough partial differential equations with transport noise.
+    \textit{Journal of Differential Equations}, \textbf{276}:43--95, 2021.
+  abstract: |-
+    The Cauchy problem for a quasilinear equation with transport rough input is studied. Using energy estimates, we provide sufficient
+    conditions that guarantee existence in any dimension, and uniqueness in the case when the underlying rough path is divergence-free.
+    We then focus on the one-dimensional scenario, with slightly more regular coefficients. Improving the a priori estimates of the first results,
+    we prove existence of a class of solutions whose spatial derivatives satisfy a Ladyzhenskaya–Prodi–Serrin type condition. Uniqueness is shown
+    in the same class, by obtaining an estimate on the difference of two solutions. The latter is obtained by establishing a link with a certain
+    backward dual equation combined with a (rough) iteration lemma \`a la Moser.
+  url: https://www.sciencedirect.com/science/article/abs/pii/S0022039620306562
+- citation: |-
+    A.~De Bouard, A.~Hocquet and A.~Prohl.
+    Existence, uniqueness and regularity for the stochastic Ericksen-Leslie equation on surfaces.
+    \textit{Nonlinearity}, \textbf{34}(6):4057--4088, 2021.
+  abstract: |-
+    Existence and uniqueness for the liquid crystal flow driven by colored noise on the two-dimensional torus is established.
+    After giving a natural uniqueness criterion, we prove local solvability in Lebesgue spaces for any level of integrability larger than two.
+    Thanks to a bootstrap principle together with a Gyöngy–Krylov-type compactness argument, this will ultimately lead us to prove the existence
+    of a particular class of global solutions which are partially regular, strong in the probabilistic sense, and taking values in the critical energy space.
+  url: https://iopscience.iop.org/article/10.1088/1361-6544/ac022e/meta
+- citation: |-
+    A.~Gerasimovics, A.~Hocquet and T.~Nilssen.
+    Non-autonomous evolution equations and the multiplicative sewing lemma.
+    \textit{Journal of Functional Analysis}, \textbf{281}(10):109200, 2021.
+  abstract: |-
+    Existence, uniqueness and regularity for local solutions of generic rough parabolic equations with subcritical noise are established,
+    on scales of Banach spaces. Besides dealing with non-autonomous evolution equations, our results also allow for unbounded operations
+    in the noise term (up to some critical loss of regularity depending on that of the rough path \( X\)). As a technical tool, we introduce
+    a version of the multiplicative sewing lemma, which allows to construct the so-called product integrals in infinite dimensions.
+    We later use it to construct a semigroup analogue for the non-autonomous linear PDEs as well as show how to deduce the semigroup version
+    of the usual sewing lemma.
+  url: https://doi.org/10.1016/j.jfa.2021.109200
+- citation: |-
+    A.~Hocquet and A.~Vogler.
+    Optimal control of mean field equations with monotone coefficients and applications in neuroscience.
+    \textit{Applied Mathematics and Optimization}, \textbf{84}(2):1925--1968, 2021.
+  abstract: |-
+    The optimal control problem associated with certain quadratic cost functionals depending on the solution of a generic stochastic mean-field type evolution equation is studied.
+    This is done under assumptions that enclose a system of FitzHugh–Nagumo neuron networks, and where for practical purposes the control is deterministic. To do so, we assume that we are given a drift coefficient that satisfies a one-sided Lipschitz condition, and that the dynamics satisfies an almost sure boundedness property. The mathematical treatment we propose follows the lines of the recent monograph of Carmona and Delarue for similar control problems with Lipschitz coefficients. After addressing the existence of minimizers via a martingale approach, we show a maximum principle, and numerically investigate a gradient algorithm for the approximation of the optimal control.
+  url: https://link.springer.com/article/10.1007/s00245-021-09816-1
+- citation: |-
+    E.~Gussetti and A.~Hocquet.
+    A pathwise stochastic Landau-Lifshitz-Gilbert equation with application to large deviations.
+    \textit{Journal of Functional Analysis}, \textbf{285}(9):110094, 2023.
+  abstract: |-
+    Using a rough path approach, existence, uniqueness and regularity for the stochastic Landau-Lifshitz-Gilbert equation with Stratonovich noise on the one-dimensional torus is established.
+    As a main result we show the continuity of the so-called Itô-Lyons map in the natural energy spaces at any level of regularity. The proof proceeds in two steps.
+    First, based on an energy estimate space together with a compactness argument we prove existence of a unique solution, implying the continuous dependence in a weaker norm.
+    This is then strengthened in the second step where the continuity in the optimal norm is established through an application of the rough Gronwall lemma.
+    Our approach is direct and does not rely on any transformation formula, which permits to treat multidimensional noise. As an easy consequence we then deduce a Wong-Zakai type result,
+    a large deviation principle, as well as a support theorem.
+  url: https://www.sciencedirect.com/science/article/abs/pii/S0022123623002513
+- citation: |-
+    P.K.~Friz, A.~Hocquet and K.~L\^e.
+    Rough stochastic differential equations.
+    To appear in \textit{CPAM}.
+  abstract: |-
+    A simultaneous generalization of It\^o's theory of stochastic and Lyons' theory of rough differential equations is established. The interest in such a unification comes from a variety of applications, including pathwise stochastic filtering, control and the conditional analysis of stochastic systems with common noise.
+  url: https://arxiv.org/abs/2106.10340
+- citation: |-
+    A.~Hocquet and A.~Vogler.
+    An application of the multiplicative Sewing Lemma to the high order weak approximation of stochastic differential equations.
+    \textit{Stochastic Processes and their Applications}, \textbf{165}, 183-217, 2023.
+  abstract: |-
+    A variant of the multiplicative Sewing Lemma in [Gerasimovi$\check{c}$s, Hocquet, Nilssen; J. Funct. Anal. 281 (2021)] is introduced.
+    It yields arbitrary high order weak approximations to stochastic differential equations, extending the cubature approximation
+    on Wiener space introduced by Lyons and Victoir. Our analysis allows to derive stability estimates and explicit weak convergence rates.
+    As a particular example, a cubature approximation for stochastic differential equations driven by continuous Gaussian martingales is given.
+  url: https://www.sciencedirect.com/science/article/abs/pii/S0304414923001692
+- citation: |-
+    A.~Hocquet and A.~Neam\c{t}u.
+    Quasilinear rough evolution equations.
+    \textit{The Annals of Applied Probability}, \textbf{34}(5):4268--4309, 2023.
+  abstract: |-
+    The abstract Cauchy problem for quasilinear parabolic equations in Banach spaces driven by a two-step rough path is investigated.
+    We explore the mild formulation that combines functional analysis techniques and controlled rough paths theory which entail the local well-posedness of such equations.
+    We apply our results to the stochastic Landau–Lifshitz–Gilbert and Shigesada–Kawasaki–Teramoto equations.
+  url: |-
+    https://projecteuclid.org/journals/annals-of-applied-probability/volume-34/issue-5/Quasilinear-rough-evolution-equations/10.1214/24-AAP2065.short
+- citation: |-
+    A.~Hocquet, M.~Hofmanov\'a and T.~Nilssen.
+    Unbounded rough drivers, rough PDEs and applications.
+    Arxiv preprint arXiv:2501.01186.
+  abstract: |-
+    A summary of recent contributions in the field of rough partial differential equations is given.
+    For that purpose we rely on the formalism of ``unbounded rough driver''. We present applications to concrete models including Landau-Lifshitz-Gilbert, Navier-Stokes and Euler equations.
+  url: https://arxiv.org/abs/2501.01186
+- citation: |-
+    A.~Hocquet, P.K.~Friz and K.~L\^e.
+    McKean-Vlasov equations with rough common noise.
+    Arxiv preprint arXiv:2507.13149.
+  abstract: |-
+    Well-posedness for McKean--Vlasov equations with rough common noise and progressively measurable coefficients is shown.
+    Our results are valid under natural regularity assumptions on the coefficients, in agreement with the respective requirements
+    of Ito and rough path theory. To achieve these goals, we work in the framework of rough stochastic differential
+    equations recently developed by the authors of this article.
+  url: https://arxiv.org/abs/2507.13149
+
+# TEACHING -> \cvteach{period}{institution}{title}{description}
+# NOTE: 
+# - The teaching section provides information about the courses taught by Antoine.
+teaching:
+- institution: École Polytechnique
+  period: 2012-2016
+  title: EV2 courses and exercise sessions
+  description: |-
+    Bachelor-level courses for foreign students, newcomers to the École Polytechnique from a wide variety of nationalities (various european countries, Brasil, China, Chile, Russia etc.).
+    The aim of these lectures is to ease transition from foreign educational system (High School or undergraduates). Another goal is to provide students with the equivalent level of a preparatory class outing (``CPGE'').
+    The areas I taught include:
+    \begin{itemize}
+    \item Introduction to Probability (elementary measure theory, Bernoulli laws, law of large numbers etc.)
+    \item Real and Complex analysis (sequences, series, analytic functions, multidimensional differential calculus, etc.)
+    \item Linear ordinary differential equations.
+    \end{itemize}
+    The EV2 teaching is accompanied with pure exercise sessions, in which the students are asked to look at problems and go to the blackboard, one after another. In addition to learning mathematical rigor (proper mathematical proofs, logic and set theory),
+    an important goal of these sessions is to facilitate the learning of French, through interaction with the teacher and other students.
+- institution: École Polytechnique
+  period: 2012-2016
+  title: Supervision of computer science sessions for 1st and 2nd years
+  description: |-
+    Students are introduced to concrete examples of finite element discretizations (in connection with the course on Partial Differential Equations and Scientific Computing).
+    Then, students are invited to implement these models using scientific software (Scilab or Freefem++).
+    The objective is to familiarize students with the use of scientific software, and to make them aware of the importance of numerical analysis in the context of scientific computing.
+- institution: École Polytechnique
+  period: 2012-2016
+  title: Tutoring sessions for 2nd years.
+  description: |-
+    Exercises related to the lecture notes of numerical analysis of G. Allaire and F. Alouges.
+    The course given at École Polytechnique introduces the concept of variational formulation for a given partial differential equation,
+    as well as the definition of Schwartz distributions and Sobolev spaces.
+- institution: École Polytechnique
+  period: 2014-2015
+  title: Supervision of projects for 2nd and 3rd years.
+  description: |-
+    The objective is to make students responsible for a numerical analysis project of their choice, oriented towards engineering and meeting a concrete objective (e.g. using excess heat produced by computers to heat a building, constructing an optimal road network, etc.).
+    The students are invited to discuss with the supervisor the relevance of their mathematical model and the approximations used.
+    The project is then evaluated by the supervisor and professors in the lab.
+- institution: École Polytechnique
+  period: 2015-2016
+  title: In-depth knowledge projects for undergraduate students
+  description: |-
+    Supervision of groups of 5 foreign students are told to investigate a topic of their choice,
+    suggested by the supervisor (e.g.\ 'Quaternions and the Banach-Tarski paradox', or 'the mathematics of quantum mechanics').
+    The supervisor meets the group weekly, until the end of the trimester where they have to provide a manuscript.
+    They are also asked to defend their work in front of the other classmates.
+- institution: Berlin Mathematical School
+  period: 2021-2022
+  title: 'M2 course: Numerical Analysis for Stochastic PDEs'
+  description: |-
+    The objective is to familiarize students with relatively recent results on strong and weak error analysis
+    of numerical schemes for stochastic partial differential equations. An overview of approximation theory for ordinary
+    stochastic differential equations is also given as an introduction
+- institution: Technische Universitaet Berlin
+  period: 2023-2024
+  title: 'M2 course: Rough Stochastic McKean--Vlasov Equations'
+  description: |-
+    The objective is to familiarize students with the theory of McKean--Vlasov equations with rough common noise.
+    The course covers the recent results on well-posedness, regularity and applications to control theory.
+    The course is based on recent contributions by P.K. Friz, A. Hocquet and K. L\^e.
+
+# NUMERICAL PROJECTS -> \cvnum{title}{description}{stack}{repo_link}
+# NOTE: The numerical_projects section lists various projects related to numerical analysis and machine learning:
+# 'description' is a brief summary of the project
+#  'stack' is a list of technologies used in the project
+#  'repo_link' is a GitHub repository link for each project
+numerical_projects:
+- title: RecSysEcho
+  description: |-
+    A modular recommender system built from the Million Song Dataset. Implements content-based and collaborative filtering
+    (KNN, SVD/SVD++), with year and genre features. Structured using MLOps best practices: testing, CI/CD, command-line scripts, and \texttt{Makefile}.
+  stack: Python, pandas, scikit-learn, pytest, Makefile.
+  repo_link: https://github.com/AntoineHocquet/RecSysEcho
+- title: FHN Optimal Control (Rust)
+  description: |-
+    Reimplementation in Rust of a neuroscience control problem using stochastic FitzHugh–Nagumo networks. Features gradient descent optimization via adjoint equations.
+    Emphasizes performance and reproducibility in a 100\% Rust-native pipeline.
+  stack: Rust (CLI, Plotters, Cargo), Euler–Maruyama scheme.
+  repo_link: https://github.com/AntoineHocquet/fhn
+- title: Boxing AI
+  description: |-
+    A reinforcement learning and adversarial training environment where two agents learn to fight in a 2D ring.
+    Uses PyTorch for neural control, adversarial updates, and animated visualizations. MLOps tooling included (unit tests, CLI, \texttt{Makefile}).
+  stack: Python, PyTorch, matplotlib, pytest.
+  repo_link: https://github.com/AntoineHocquet/boxing
+- title: Automated CV/Letter Generator
+  description: |-
+    LLM-powered app to generate LaTeX cover letters from job ads. Includes Streamlit UI, Docker-based LaTeX compilation, and Mistral API integration.
+    Designed with privacy-first and automation-ready mindset.
+  stack: Python, Streamlit, LangChain, LaTeX, Docker, Mistral API.
+  repo_link: https://github.com/AntoineHocquet/automated-cv
+- title: RAG-Formulate
+  description: |-
+    A document reformulation tool using retrieval-augmented generation (RAG). Embedding-based fragment selection (FAISS) + LLM rewriting
+    with strict constraints. Modular pipeline with full testing suite.
+  stack: Python, FAISS, Mistral API, pytest.
+  repo_link: https://github.com/AntoineHocquet/rag-formulate
+- title: SpaceY (Rocket Landing Prediction)
+  description: |-
+    End-to-end ML project predicting SpaceX Falcon 9 landings. Includes data scraping, SQL EDA, geospatial plots, multiple ML models, and interactive Dash dashboard. Follows reproducible MLOps design.
+  stack: Python, pandas, scikit-learn, SQL, Dash, folium, Makefile, argparse.
+  repo_link: https://github.com/AntoineHocquet/spaceY
+- title: LLG Simulation App
+  description: |-
+    Scientific computing pipeline for solving the Landau–Lifshitz–Gilbert (LLG) equation on a 2D disk using finite elements. Leverages FreeFEM++,
+    Docker, and Python CLI for full reproducibility. Features 3D static/animated visualizations and parameter overrides via command line.
+  stack: FreeFEM++, Python (matplotlib, pandas), Docker, CLI, JSON config.
+  repo_link: https://github.com/AntoineHocquet/llg
+- title: LLG 1D Simulation Pipeline
+  description: |-
+    Hybrid C++/Python pipeline for simulating a 1D nonlinear PDE representing magnetization dynamics. Uses finite differences in C++ for
+    performance, Python for orchestration, visualization, and CI automation. Includes Docker support and GitHub Actions testing.
+  stack: C++, Python (matplotlib, pandas), Makefile, GitHub Actions CI.
+  repo_link: https://github.com/AntoineHocquet/1dllg
+- title: GeoNavRL
+  description: |-
+    Reinforcement learning environment for simulating last-mile delivery navigation. Inspired by real-world challenges in logistics
+    and urban mapping, this project explores how agents can learn to make optimal routing decisions in uncertain, noisy,
+    and geospatially constrained environments. 
+  stack: 
+    Python, PyTorch, stable-baselines3, geopandas, shapely, folium, matplotlib, osmnx, gymnasium, pytest, Docker, Makefile.
+  repo_link: https://github.com/AntoineHocquet/GeoNavRL
+- title: dida-roof-seg
+  description: |-
+    A deep learning model for semantic segmentation of roofs in satellite images, trained on the DIDA dataset.
+    Implements a U-Net architecture with data augmentation, early stopping, and model checkpointing.
+  stack: Python, PyTorch, matplotlib, Makefile.
+  repo_link: https://github.com/AntoineHocquet/dida-roof-seg
+- title: fraud-DL
+  description: |-
+    A tiny, simple and modular-ish baseline for fraud detection on the Kaggle ULB Credit Card Fraud dataset.
+    Focus: clarity > features. Imbalanced learning done the simple way. While it avoids the use of PyTorch,
+    it provides a quick DL-ish flavor using `sklearn.neural_network.MLPClassifier`.
+  stack: Python, pandas, scikit-learn, matplotlib.
+  repo_link: https://github.com/AntoineHocquet/fraud-DL
+
+# RESEARCH -> \cvres{title}{period}{description}
+# NOTE: The research section lists various research topics and periods of interest.
+# 1) 'title' is the title of the research topic.
+# 2) 'period' is the time frame during which the research was conducted.
+# 3) 'description' is a brief summary of the research work
+research:
+- title: Micromagnetism, Landau-Lifshitz-Gilbert equation and related topics
+  period: 2012-2016
+  description: |-
+    The stochastic Landau-Lifshitz-Gilbert equation was introduced in \cite{landau1935theory} to model the evolution
+    of the magnetization of a given ferromagnetic domain \(\mathscr O \subset \mathbb R^n\) for \( 1\le n\le 3\).
+    It takes the form of the SPDE
+    \begin{equation}
+    \label{SLLG}%\tag{SLLG}
+    d u_t=\left(\beta u_t\times H_{\mathrm{eff}}(u_t)-\alpha u_t\times (u_t\times H_{\mathrm{eff}}(u_t))\right) dt + \epsilon u_t\times d W_t,\quad |u_t(\omega ,x)|_{\mathbb R^3}\equiv 1
+    \end{equation}
+    on \( (0,T]\times \mathscr O\),
+    where the effective field \( H_{\mathrm{eff}}(u)=-\nabla E(u)\), \( E\) being the total energy of the system
+    (the unknown \(u_t(x,\omega)\) takes values in the unit sphere).
+    Understanding the effect of the noise term \( dW\) (modelizing thermal fluctuations) is an important mathematical question, for instance to study long term stability properties of magnetized materials (such as information storage devices, see e.g.\ \cite{kohn2005magnetic}).
+    Formally, the case when \( E=\frac12\int |\nabla u|^2dx \) and \( \alpha=1\gg|\beta|\) reduces to the \textit{stochastic harmonic map flow}
+    \begin{equation}
+    \label{SHMF}%\tag{SHMF}
+    d u_t=\left(\Delta u_t+u_t|\nabla u_t|^2\right) dt + \epsilon u_t\times d W_t,\quad |u_t(\omega ,x)|_{\mathbb R^3}\equiv 1\,,
+    \end{equation}
+    which was originally studied by Eells and Sampson in \cite{eells1964harmonic} when \( \epsilon=0\) to construct harmonic maps between two manifolds.
+    It is related to a number of physical models displaying spherical constraints (including Ericksen-Leslie system for liquid crystals \cite{de2021existence} or Funaki's motion of a random string \cite{bruned2022geometric}).
+    An important open problem for \eqref{SLLG}-\eqref{SHMF} when \( d\ge2\) is to understand the blow-up behaviour of solutions in presence of noise, as was partly addressed in my contributions \cite{alouges2014semi,hocquet2015landau,hocquet2018struwe,hocquet2019finite,de2021existence}.
+    A few years ago, Pierre Rapha\"el and his co-authors showed that the deterministic harmonic map flow explosion is stable under small perturbations of the initial data \cite{raphael2013stable}, in an equivariance-preserving direction, which is also the type of symmetry I considered in \cite{hocquet2019finite} when I showed the existence of singular solutions for a (well-chosen) degenerate noise term.
+    This contrasts with \cite{merle2013blow} where it is shown existence, but instability, of initial data leading to the explosion for the deterministic version of \eqref{SLLG}. It appears that the instability is due to the necessary extra degree of freedom of the solutions, compared to \eqref{SHMF} for which a reduction to a scalar problem via the equivariant ansatz is possible.
+    This leads to the conjecture that a fully non-degenerate noise term should prevent the explosion phenomenon to occur, which is a problem I would like to address in the future.
+- title: Rough partial differential equations
+  period: 2016-2019
+  description: |-
+    Introduced by Lyons in \cite{lyons1998differential,lyons2002system}, rough paths allow to describe solutions of ordinary differential equations controlled by an arbitrary irregular signal.
+    Rough \textit{partial} differential equations are special cases of singular PDEs, where the irregularity occurs in a particular direction (usually the ``time'' variable).
+    Despite this specificity, they are relevant in a number of physical models where the irregularity appears as a stochastic process indexed by a time variable (the most common example is Brownian motion).
+        
+    Fixing the sample parameter \( \omega\in \Omega\), one may describe the models \eqref{SLLG}-\eqref{SHMF} as particular instances of the generic RPDE%
+    \footnote{Here $A_\cdot $ is a family of (possibly non-linear) operators, $\mathbf X^i,i=0,\dots d\in \mathbb N\cup\{\infty\}$ is a rough path with values in some functional space (for the spatial variable $x\in \mathbb R^n$), while \( F \) and \( N \) are non-linearities. }
+    \begin{equation}
+      \left\{
+        \begin{aligned}\label{ansatz_RPDE}
+          &du_t -(A_t(u_t)u_t + N_t(u_t))dt = \sum\nolimits_{i=0}^d F_i(u_t)d\mathbf X^i_t,\quad \text{on}\enskip [0,T]\times \mathbb R^n\,,
+          \\
+          &u_0\in L^p(\mathbb R^n).
+        \end{aligned}
+      \right.
+    \end{equation}
+    An important aim of my previous research was to develop a general methodology to obtain \textit{a priori estimates} for partial differential
+    equations of this type, as partly carried out in \cite{hocquet2018energy,hocquet2020ito,hocquet2020generalized,hocquet2021quasilinear}.
+    A different -- though related -- purpose is to find rough counterparts of functional analytic techniques which fail in the setting of It\^o's
+    stochastic calculus, due to regularity or measurability issues. This direction was partly explored in the recent contributions
+    \cite{gerasimovics2021non,hocquet2022weak,hocquet2022quasilinear}, where a generalization of the Sewing Lemma in operator algebras was introduced.
+- title: Mean field control in neuroscience
+  period: 2019-2022
+  description: |-
+    FitzHugh proposed in 1961 a three-dimensional equation to describe the temporal evolution of a neuron subjected to an external current $X\colon [0,T ]\to \mathbb R$.
+    This model generalizes well to the case of a \textit{network} of interacting neurons (e.g.\ a small area of the brain), in which case the evolution of the $i$-th neuron \( Y^i_t=(v^i_t,w^i_t,c^i_t)\), \(i=1,\dots N\)
+    is governed by
+    \begin{equation}\label{FHN}%\tag{FHN}
+      \left\{
+        \begin{aligned}
+          &dv^i_t=\Big(v^i_t-\frac{(v^ i_t)^3}{3}-w_t^i - \frac{1}{N}\sum\nolimits_{j=1}^N (v^i_t-1)c^j_t\Big)dt +d X^i_t
+          \\
+          &\quad\quad  
+          - \frac{1}{N}\sum\nolimits_{j=1}^N(v^i_t-1)c^j_tdB_t^i
+          \\
+          &dw^i_t=(v^i_t+1-w^i_t)dt\enskip ,
+          \\
+          &dc^i_t=(S (v_t^i)(1-c_t^i)-c_t^i)dt
+        \end{aligned}
+      \right.
+    \end{equation}
+    where \( B\) is Brownian noise coming from the interactions,
+    \( S(v)=\frac{1}{1+\exp(-v)} \), while  \( dX_t= \alpha_t dt +d\tilde B_t \) is a control for an independent brownian \( \tilde B\) (external noise).
+    The mathematical treatment of \eqref{FHN} (and of its mean-field limit \eqref{rough_SDE}), is still in its infancy because the coefficients are not Lipschitz.
+    From the point of view of concrete applications, the model \eqref{FHN} is motivated by the treatment of neural diseases (in this model, \( X_t \) models an external current whose purpose is to generate a given brain response).
+    Despite our contribution \cite{hocquet2020optimal} the problem of approximation of an optimal control (for a given cost functional \( J(X)\)) remains largely open.
+
+    A current research topic is the weak error analysis when the Wiener measure is replaced by a simpler probability measure which nevertheless preserves some quantities of interest. An example is the \textit{cubature} method introduced by Lyons and Victoir \cite{lyons2004cubature}. An attempt in this direction was made in \cite{hocquet2022weak} (with the approximation of the control problem for \eqref{FHN} as a horizon). We derived weak convergence rates for classical SDEs from a novel argument, based on the multiplicative sewing lemma of \cite{gerasimovics2021non}. It seems to be flexible enough to include the full ansatz \eqref{rough_SDE}, which I want to address in the future.
+
+- title: Hybrid rough and stochastic differential equations
+  period: 2022-2024
+  description: |- 
+    When \( N\gg 1\), the chaos propagation result of \cite{baladron2012mean}
+    implies that the dynamics of a single neuron $Y_t$ can be approximated by a
+    McKean-Vlasov equation of the form
+    \begin{equation}\label{rough_SDE}%\tag{RSDE}
+    \left\{
+    \begin{aligned}&dY_t=b(Y_t,\mu_t)dt+\sigma(Y_t,\mu_t)dB_t+f(Y_t,\mu_t)d\mathbf X_t\quad \\text{on }(s,T],
+    \\& \\mu_t=\\mathcal L(Y_t), \\
+    \\& Y_s=\\xi.
+    \end{aligned}
+    \right.
+    \end{equation}
+    where for fixed \( t\) the term \( \mu_t\) denotes the law of the random variable \( Y_t\),
+    $b$ is a non-linearity, $\sigma$ a diffusion matrix and $B$ a standard multidimensional
+    Brownian motion, while \( \mathbf X \) is a given control.
+    The ansatz \eqref{rough_SDE} actually covers a wide variety of applications which go much
+    beyond control theory. For instance, in the theory of filtering, the input \(\mathbf X\)
+    can be thought as a frozen realization of an additional, observed source of noise. 
+    In recent works with Peter Friz and Khoa L\\^e \\cite{friz2021rough,friz2022mckean},
+    we have developed a notion of stochastic rough differential equation which reduces
+    exactly to an It\^o equation (resp.\ to a rough differential equation) when
+    \(f\) (resp.\ \(\sigma\) ) is taken equal to zero.  In doing so, we have been
+    forced to revise the main concepts of classical stochastic and rough analysis
+    and to introduce the corresponding mixed objects.
+
+# EVENTS -> \cvevent{type}{title}{location}{date}{description}{link}
+# NOTE: The events section lists various events related to the individual's academic and professional activities.
+# 1) 'type' is the type of event (e.g., workshop, conference, seminar).
+# 2) 'title' is the title of the event.
+# 3) 'location' is the venue where the event took place.
+# 4) 'date' is the date of the event.
+# 5) 'description' is a brief summary of the event
+# 6) 'link' is a URL with more information about the event.
+events:
+- type: Scholarship
+  title: Randomness, PDEs and Nonlinear Fluctuations
+  location: Bonn University
+  date: Fall 2019
+  description: |-
+    Scholarship award as participant and group leader, from the University of Bonn, to participate in the Junior Trimester Program \textit{Randomness, PDEs and Nonlinear Fluctuations} (Coordinator: Prof.\ Massimiliano Gubinelli).
+    Organization of 2 workshops.
+  link: https://him-application.uni-bonn.de/uploads/media/report_HOCQUET-group4.pdf
+- type: Workshop
+  title: Harmonic analysis and rough paths
+  location: Bonn University
+  date: Nov.\ 18-19, 2019
+  description: |-
+    (With Peter Friz and Pavel Zorin-Kranich).
+    The goal of this conference was to further explore the connections between stochastic/rough analysis
+    on the one hand and harmonic analysis on the other.
+  link: |-
+    https://www.him.uni-bonn.de/de/programs/past-programs/past-junior-trimester-programs/randomness-pdes-fluctuations-2019/workshop-harmonic-analysis-and-rough-paths-november-18-19-2019/
+- type: Workshop
+  title: Problems of roughness, geometry and random fluctuations
+  location: Bonn University
+  date: Dec.\ 9-12, 2019
+  description: |-
+    (With Khoa L\^e).
+    This conference aimed to bring together different communities in the field of stochastic differential equations in finite or infinite dimension.
+    Various experts such as A.\ Thalmaier, M.\ R\"ockner, X-M.\ Li, H.\ Oberhauser, C.\ Litterer, G.\ Iyer, K-T.\ Sturm, P.\ M\"orters, L.\ Coutin and A.\ Deya (among others) were invited,
+    which made it possible to bring together independently developing theories. Many discussions took place during the coffee breaks.
+  link: |-
+    https://www.him.uni-bonn.de/de/programs/past-programs/past-junior-trimester-programs/randomness-pdes-fluctuations-2019/problems-of-roughness-geometry-and-random-fluctuations/
+- type: Workshop
+  title: Stochastic optimal control of interacting particle systems
+  location: Technische Universit\"at Berlin
+  date: 10 Jan., 2020
+  description: Mini-symposium organized with Wilhelm Stannat and Alexander Vogler
+  link: |-
+    https://www.itp.tu-berlin.de/collaborative_research_center_910/sonderforschungsbereich_910/events/symposia/stochastic_optimal_control_of_interacting_particle_systems_100120/
+- type: Workshop reporter
+  title: New directions in rough paths theory
+  location: Oberwolfach, Germany
+  date: Dec.\ 7-12, 2020
+  description: |-
+    Organization and report of the Oberwolfach meeting 2050a.
+    The goal of this meeting was to bring together the main experts in rough paths theory, to discuss recent developments and future directions.
+  link: https://www.mfo.de/occasion/2050a/www_view
+
+# TALKS -> \cvtalk{text}
+# NOTE: The talks section lists presentations given at various conferences/events (except seminars), given by the individual.
+#  'text' is the only field here, containing talk's title, date, location, and event information
+talks:
+- text: |-
+    06.06.2013, Grenoble. \textit{A semi-discrete scheme for the stochastic Landau-Lifshitz-Gilbert equation.} Mini-conférence ANR-micromanip.
+- text: |-
+    11.07.2015, Saint-Flour. \textit{Finite-time blow-up for the stochastic LLG on the unit disk.}
+    45th Probability Summer School (6-17 Jul.\ 2015), 7 rue des Planchettes, Saint-Flour, France.
+- text: |-
+    12.08.2016, Weierstrass Insitute, Berlin. \textit{Large time behaviour of the stochastic harmonic map flow.} 5th Berlin-Oxford meeting
+- text: |-
+    10.10.2016, Bielefeld. \textit{Large time behaviour of the stochastic harmonic map flow.}
+    {Stochastic Partial Differential equations (Oct.\ 10-14, 2016). Conference in honor of Michael R\"ockner's 60th birthday, Bielefeld, Germany}
+- text: |-
+    28.09.2017, Bielefeld. \textit{Recent results on the stochastic LLG in 2 or 3 dimensions.}
+    Stochastic spin systems: models, theory, simulation and real world applications (Sep.\ 28-30,2017). University of Bielefeld, Germany
+- text: |-
+    18.05.2017, Weierstrass Institute, Berlin. \textit{The energy method for rough partial differential equations.}
+    7th Annual ERC Berlin-Oxford Young Researchers Meeting on Applied Stochastic Analysis (May 18-20, 2017). Weierstrass Institute, Berlin
+- text: |-
+    16.12.2017, \textit{Itô formula for RPDEs and boundedness of solutions} 8th Oxford-Berlin Young Researchers Meeting on Applied Stochastic Analysis (Dec.\ 14-16, 2017). University of Oxford.
+- text: |-
+    9th Annual ERC Berlin-Oxford Young Researchers Meeting on Applied Stochastic Analysis (Jun.\ 14-16, 2018). Weierstrass Institute, Berlin
+- text: |-
+    29.11.2018, \textit{A multiplicative sewing Lemma and some by-products}. 10th Oxford-Berlin Young Researchers Meeting on Applied Stochastic Analysis (Nov.\ 29 - Dec.\ 1st 2018). University of Oxford
+- text: |-
+    16.01.2019, \textit{A multiplicative sewing Lemma and applications} Berlin-Leipzig workshop in analysis and stochastics (Jan.\ 15-18, 2019). Max-Planck-Institut für Mathematik, Leipzig, Germany
+- text: |-
+    24.05.2019, \textit{Hybrid rough and stochastic differential equations}11th Oxford-Berlin Young Researchers Meeting on Applied Stochastic Analysis (May 23-25, 2019). Weistrass Institute, Berlin
+- text: |-
+    18.11.2019, \textit{Quasilinear rough partial differential equations with transport noise}. Harmonic Analysis and rough paths (Oct.\ -18, 2019), HIM, Bonn (speaker and organisor)
+- text: |-
+    10.01.2020, Technische Universität Berlin. \textit{Optimal control of mean-field equations with monotone coefficients and applications in neurosciences}. Mini-symposium Interacting particle systems
+- text: |-
+    15.10.2020, \textit{Monoid-valued sewing lemmata and applications}. Higher structures emerging from renormalisation,  ESI Vienna (online meeting, Oct.\ 12-16, 2020)
+- text: |-
+    09.03.2021, \textit{Monoid-valued sewing lemmata and applications}. Pathwise Stochastic Analysis and Applications, CIRM, (virtual conference, March 8-12, 2021)
+
+# SEMINARS -> \cvseminar{text}
+# NOTE: The seminars section lists various talks at seminars, given by the individual, at a laboratory (town) where he was invited.
+#  'text' is the only field here, containing talk's title, date, location, and event information
+seminars:
+- text: |-
+    11.02.2016, Amiens. \textit{Singularités du flot stochastique des applications harmoniques.} Séminaire de probabilités. Invitation: Olivier Goubet
+- text: |-
+    05.07.2016, Pisa. \textit{Finite-time singularities of the stochastic harmonic map flow on surfaces.} Probability seminar. Invitation: Marco Romito.
+- text: |-
+    16.05.2017, Aachen. \textit{Finite-time singularities of the stochastic harmonic map flow on surfaces.} Probability seminar.
+- text: |-
+    30.05.2017, Nice. \textit{Finite-time singularities of the stochastic harmonic map flow on surfaces.} Séminaire de probabilit\'es. Invitation: Roland Diel
+- text: |-
+    13.11.2017, York. \textit{A variational approach to partial differential equations driven by a rough path.} Probability seminar. Invitation: Zdzislaw Brzezniak.
+- text: |-
+    22.11.2017, Bielefeld. \textit{It\^o formula for RPDEs and boundedness of solutions}. Probability seminar. Invitation Martina Hofmanová.
+- text: |-
+    29.11.2017, T\"ubingen. \textit{Rough paths and Stochastic Calculus (a digest).} Probability seminar. Invitation: Andreas Prohl
+- text: 14.05.2018, Oxford. \textit{Unbounded rough drivers, Sobolev spaces and Moser
+    iteration.} Probability Seminar.
+- text: 10.01.2019, Berlin. \textit{Rough stochastic analysis}. Probability Seminar.
+- text: |-
+    23.02.2020, Universit\'e Paul Sabatier, Toulouse. \textit{Hybrid differential equations and applications.} Séminaire d’Analyse, invitation: Vincent Feuvrier
+
+# POSTERS
+posters:
+  - text: Poster contributions on Mathematical Physics (Landau--Lifshitz) presented at international workshops; details available on request.
+
+# SKILLS PROGRAMMING -> \cvprog{language}{proficiency}
+# NOTE: programming skills of Antoine
+# 1) 'language' should be a programming language
+# 2) 'proficiency' should be a proficiency level (grade between 0 and 5)
+skills_programming:
+- language: Python
+  proficiency: '4.7'
+- language: SQL
+  proficiency: '4.0'
+- language: C++
+  proficiency: '3.5'
+- language: Rust
+  proficiency: '3.0'
+- language: R
+  proficiency: '2.5'
+
+
+# SKILLS SCIENTIFIC SOFTWARE -> \cvscientsoft{software}{proficiency}
+# NOTE: scientific software skills of Antoine
+# 1) 'software' should be a scientific software
+# 2) 'proficiency' should be a proficiency level (grade between 0 and 5)
+skills_scientific_software:
+- software: MATLAB
+  proficiency: '5.0'
+- software: FreeFem++
+  proficiency: '5.0'
+- software: SciPy
+  proficiency: '4.0'
+
+# MLOPS -> \cvmlops{function}{name}{proficiency}
+# NOTE: MLOps skills of Antoine
+# 1) 'function' should be a specific MLOps function
+# 2) 'name' should be the name of the tool or technology
+# 3) 'proficiency' should be a proficiency level (grade between 0 and 5)
+skills_mlops:
+- function: Development and debugging
+  name: VS Code
+  proficiency: '4.5'
+- function: Containerization
+  name: Docker
+  proficiency: '3.5'
+- function: Version control \& CI/CD
+  name: Git, Github Actions, Pytest
+  proficiency: '4.5'
+- function: OS \& Scripting
+  name: Linux, Bash
+  proficiency: '4.5'
+- function: AI tools
+  name: Copilot, Windsurf, Google Colab
+  proficiency: '3.5'
+- function: Cloud-based ML workflows
+  name: GCP, AWS, Azure
+  proficiency: '2.5'
+
+# MATH KEYWORDS -> \cvmath{short_math_keyword}{proficiency}
+# NOTE: math keywords corresponding to Antoine's field of expertise, specifically in mathematics
+# 1) 'short_math_keyword' should be a short math keyword
+# 2) 'proficiency' should be a proficiency level (grade between 0 and 5)
+math_keywords:
+- short_math_keyword: Probability Theory
+  proficiency: '5.0'
+- short_math_keyword: Stochastic Analysis
+  proficiency: '5.0'
+- short_math_keyword: Statistics
+  proficiency: '4.0'
+- short_math_keyword: Partial differential equations
+  proficiency: '3.5'
+- short_math_keyword: Rough Paths
+  proficiency: '4.5'
+- short_math_keyword: Control
+  proficiency: '4.0'
+- short_math_keyword: Numerical Analysis
+  proficiency: '3.5'
+
+# KEYWORDS -> \cvkeywords{keyword}
+# NOTE: keywords corresponding to the individual's field of expertise
+keywords:
+- keyword: Stochastic Analysis
+- keyword: It\^o calculus
+- keyword: Diffusions
+- keyword: Partial Differential Equations
+- keyword: Rough Partial Differential Equations
+- keyword: Stochastic Partial Differential Equations
+- keyword: Stochastic Control
+- keyword: Rough Stochastic Equations
+- keyword: Rough Paths
+- keyword: Numerical analysis
+- keyword: Interacting Particle Systems
+- keyword: Mean-Field Stochastic Differential Equations
+- keyword: Mathematical physics
+- keyword: Micromagnetism
+- keyword: Liquid crystals
+- keyword: Neuroscience
+
+# TEACHING SKILLS -> \cvskillsteach{competence}{description}
+# NOTE: teaching skills of the individual
+# 1) 'competence' is the teaching competence
+# 2) 'description' is a brief summary of the competence
+skills_teaching:
+- competence: Bilingual \& intercultural teaching
+  description: Mathematics instruction in French (native) and English (fluent); German (B2, certificate July 2025). Experience teaching foreign newcomers in the \textbf{EV2} mathematics course at École Polytechnique.
+- competence: Teaching \& assessment
+  description: Lecturing and tutorials at university level; design, correction, and grading of exams and assignments; detailed feedback; supervision of Master’s theses and projects.
+- competence: Digital tools for teaching
+  description: Python (NumPy, pandas, Matplotlib), Jupyter, MATLAB, \textsc{FreeFem++}, Scilab; creation of simulations/visualisations to support learning.
+- competence: Online teaching
+  description: Experience with online teaching platforms (Zoom) and tools (Google Classroom) for remote learning.
+- competence: AI in education
+  description: Integration of AI tools (e.g., ChatGPT) to enhance learning experiences and provide personalized support.
+- competence: Collaboration
+  description: Course co-design, seminar organisation, and teamwork within international academic environments.
+
+# SOFT SKILLS -> \cvsoftskill{soft_skill}
+# NOTE: soft skills of the individual
+soft_skills:
+- soft_skill: Analytical thinking
+- soft_skill: Problem-solving
+- soft_skill: Perseverance
+- soft_skill: Rigor
+- soft_skill: Adaptability
+- soft_skill: Clear Communication
+- soft_skill: Teamwork
+- soft_skill: Time Management
+- soft_skill: Creativity
+- soft_skill: Attention to Detail
+- soft_skill: Critical Thinking
+- soft_skill: Scientific Writing
+- soft_skill: Interdisciplinary Collaboration
+- soft_skill: Mentoring and Coaching
+- soft_skill: Lecture Preparation
+- soft_skill: Exam Preparation
+- soft_skill: Enthusiasm for Teaching
+- soft_skill: Conveying Complex Ideas with Simple Words
+- soft_skill: Science Communication
+- soft_skill: Public Speaking
+
+
+# GRAPHS -> \cvgraphs{image_title}{description}
+# NOTE: graphs related to the individual's work
+# - 'image_title' is a short title for the graph
+# - 'description' is a brief summary of the graph
+graphs:
+- image_title: eee
+  description: |-
+    Simulation example: Spontaneous reversal of magnetization (Blow-up). From left ($t=0$) to right ($t=1$s):
+    the energy of the system concentrates at the disk's center as time passes.
+- image_title: fhn
+  description: |-
+    Neural control example: FitzHugh-Nagumo neuron model with optimal control. From left to right:
+    Membrane potential, adjoint state and optimal control for a population of neurons.
+
+# KEYPOINTS -> \cvkeypoints{icon}{punchline}
+# NOTE: key points about the individual's work
+# These points should highlight the individual's main contributions and strengths.
+# 'icon' is the \fa* icon (from fontawesome5') to be displayed
+# 'punchline' is a brief summary of the key point
+keypoints:
+- icon: \faGraduationCap
+  punchline: |-
+    Mathematician with strong academic background; Strong publication record in stochastic analysis, PDEs, and control theory
+- icon: \faUserGraduate
+  punchline: Capacity to address complex problems with a rigorous mathematical approach
+- icon: \faHands
+  punchline: Research rooted in applications (e.g. micromagnetism, fluid mechanics)
+- icon: \faHandshake
+  punchline: Collaborative mindset; Proven experience working in international research teams with multicultural backgrounds
+- icon: \faLaptopCode
+  punchline: Frequent numerical experiments; strong programming skills in Python
+- icon: \faCertificate
+  punchline: Certification at MIT Professional Education (Applied Data Science Program);
+    capstone project on recommender systems
+- icon: \faUserTie
+  punchline: Hands-on experience in data science pipelines
+- icon: \faBrain
+  punchline: Deep knowledge of the mathematics behind machine learning (ML, DL and
+    GenAI)
+- icon: \faCogs
+  punchline: MLOps best practices
+- icon: \faCode
+  punchline: Strong sense of what \textit{good code} looks like and how to structure
+    it; portfolio mindset
+- icon: \faComments
+  punchline: Ability to communicate complex ideas clearly through teaching and public
+    speaking
+- icon: \faCloud
+  punchline: Growing knowledge of cloud-based ML workflows (GCP, Azure)
+- icon: \faLanguage
+  punchline: Native language \textbf{French}, fluent in \textbf{English}, and conversational
+    \textbf{German} (B2-C1, with B2 diploma)
+- icon: \faChalkboardTeacher
+  punchline: Qualified secondary school mathematics teacher with a Master degree in Mathematics and the French \textit{Agrégation} (national teaching qualification).
+- icon: \faUniversity
+  punchline: Experienced across various university levels, including undergraduate and graduate courses.
+- icon: \faLanguage
+  punchline: Multilingual instruction in English and French; Keen to teach in German and actively progressing (\textbf{B2} certificate obtained in July).
+- icon: \faUsers
+  punchline: Passionate about making mathematics concrete and motivating through hands-on activities, small-group work, and modern pedagogy.
+
+# MISC -> \cvmisc{label}{value}
+# NOTE: miscellaneous related to the individual's (antoine) personal information
+misc:
+- label: Nationality
+  value: French
+- label: Spoken languages
+  value: French (native), English (fluent), German (B2 Diploma)
+- label: Personal status
+  value: Married, 2 children.
+- label: Titles/Affiliation
+  value: Researcher \textbar\ Postdoctoral fellow \textbar\ Technische Universit\"at
+- label: Further training (Coursera)
+  value: Web scraping, interactive dashboards, Basics of RAG and LangChain, Git/GitHub workflows, prompting techniques for GenAI, MLOps tools, basic Rust for ML.
+- label: References
+  value: |-
+    Available upon request;
+    (former supervisors: Friz: \texttt{friz@math.tu-berlin.de},
+    De Bouard: \texttt{anne.debouard@polytechnique.edu},
+    Hofmanov\'a: \texttt{hofmanova@math.uni-bielefeld.de},
+    Stannat: \texttt{stannat@math.tu-berlin.de})
+- label: Google Scholar
+  value: Click here to see my research profile: \href{https://scholar.google.com/citations?user=Z4gS7yEAAAAJ&hl=en}{ \high{ \faGlobe } }
+- label: Geographical availability
+  value: Willing to relocate if necessary (e.g., Munich, Frankfurt, Leipzig etc; Anywhere in Europe or in UK); open to remote work. 
+- label: Interests
+  value: Astrophysics, theoretical physics, piano/guitar, telescope sky-watching, football, running, cooking, reading, history, traveling, spending time with family.
+- label: References
+  value: >-
+    Available upon request; \newline
+    Or ask directly to my former project supervisors
+    \begin{itemize}
+      \item Peter Friz: \high{\href{mailto:friz@math.tu-berlin.de}{<friz@math.tu-berlin.de>}}
+      \item Anne De Bouard: \high{\href{mailto:anne.debouard@polytechnique.edu}{<anne.debouard@polytechnique.edu>}}
+      \item Martina Hofmanov\'a: \high{\href{mailto:hofmanova@math.uni-bielefeld.de}{<hofmanova@math.uni-bielefeld.de>}}
+      \item Wilhelm Stannat: \high{\href{mailto:stannat@math.tu-berlin.de}{<stannat@math.tu-berlin.de>}}
+    \end{itemize}
+- label: Further training (Coursera)
+  value: |-
+    Web scraping, interactive dashboards, Basics of RAG and LangChain, Git/GitHub workflows, prompting techniques for GenAI, MLOps tools, basic Rust for ML.
+- label: IBM Data Science Professional Certificate
+  value: |-
+    Additional certification completed in Nov.\ 2024 (IBM Skills Network / Coursera). 
+    Comprehensive 10-course track that emphasized \textbf{relational databases} 
+    (SQL), \textbf{CRISP-DM} methodology, and creating \textbf{interactive dashboards} 
+    using \textbf{Dash}. Gained hands-on experience with \textbf{web scraping} 
+    (Beautiful Soup), geographic visualizations (Folium), and version control 
+    via Git/GitHub. Also explored \textbf{R} and \textbf{RStudio} to broaden 
+    data analysis capabilities beyond Python.
+
+
+# SECTIONS -> \cvsections{section_title}
+# NOTE: sections of the individual's CV
+sections:
+- section_title: Personal Information
+- section_title: Key points about me
+- section_title: Education and Training
+- section_title: Skills
+- section_title: Project description
+- section_title: Publication list
+- section_title: Oral Communications
+- section_title: Teaching portfolio
+- section_title: Teaching statement
+- section_title: Numerical portfolio
+
+# SUBSECTIONS -> \cvsubsections{subsection_title}
+# NOTE: subsections of each section
+subsections:
+- subsection_title: Professional Experience
+- subsection_title: Mathematical expertise
+- subsection_title: Programming expertise
+- subsection_title: Scientific Softwares
+- subsection_title: Softskills
+- subsection_title: MLOps and DevOps tools
+- subsection_title: Keywords
+- subsection_title: Major events in scientific career
+- subsection_title: Conferences
+- subsection_title: Invited seminars
+- subsection_title: A personal reflection note on the practice of teaching
