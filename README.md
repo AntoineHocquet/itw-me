@@ -37,10 +37,10 @@ Phase 1 (works offline, no keys):
       `uvicorn itw_me.adapters.inbound.api:app` answering canned text
 
 Phase 2 (real RAG):
-- [ ] Write corpus/cv.md and corpus/bio.md
-- [ ] scripts/ingest.py -> Chroma
-- [ ] ChromaCorpusRetriever, OpenAIAnswerGenerator
-- [ ] Citations returned by the API
+- [x] Write corpus/cv.md and corpus/bio.md
+- [x] scripts/ingest.py -> Chroma
+- [x] ChromaCorpusRetriever, OpenAIAnswerGenerator
+- [x] Citations returned by the API
 
 Phase 3 (observability):
 - [ ] OTel instrumentation: counter for questions, histograms for
@@ -48,3 +48,21 @@ Phase 3 (observability):
 - [ ] /metrics endpoint via the Prometheus exporter
 - [ ] docker-compose up: watch Prometheus scrape, build one Grafana
       dashboard (request rate, p95 latency, tokens per answer)
+
+## Running phase 2 (real RAG)
+
+```bash
+pip install -e ".[dev]"
+python scripts/ingest.py          # chunk corpus/*.md, embed, upsert into ./chroma_data
+
+export ITW_ME_FAKE_LLM=0          # or put it in a local .env (see .env.example)
+uvicorn itw_me.adapters.inbound.api:app
+```
+
+By default (`ITW_ME_FAKE_LLM=0`) the LLM side targets a local Ollama
+server (`http://localhost:11434/v1`, model `llama3.1`) so this costs
+nothing while developing -- `ollama pull llama3.1 && ollama serve`
+first. To use the real OpenAI API instead, set `ITW_ME_LLM_BASE_URL`,
+`ITW_ME_MODEL`, and `OPENAI_API_KEY` (see .env.example). Retrieval
+(ChromaCorpusRetriever) is always real and needs no key either way --
+embeddings run locally via Chroma's built-in model.

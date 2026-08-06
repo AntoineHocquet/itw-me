@@ -1,4 +1,4 @@
-# Task: Complete the itw-me RAG chatbot (Phase 2)
+# Task: Complete the itw-me RAG chatbot (Phase 2) -- done
 
 ## Context
 
@@ -55,67 +55,57 @@ clear code over clever code.
 5. Naming convention for adapters: Technology + PortName
    (e.g. ChromaCorpusRetriever).
 
-## Phase 2: real RAG
+## Phase 2: real RAG (all done)
 
 1. ~~**Corpus**: create `corpus/cv.md` and `corpus/bio.md`~~ -- done.
-2. **Shared config**: create a small module
-   (`src/itw_me/adapters/outbound/chroma_config.py`) holding the collection
-   name and embedding-function choice, imported by BOTH the ingest script and
-   the retriever adapter, so they cannot drift apart. Decision: use Chroma's
-   built-in default embedding function (a local ONNX sentence-transformer,
-   `all-MiniLM-L6-v2`) -- no API key, no network call per query, consistent
-   with the offline-first approach used in Phase 1. Revisit only if retrieval
-   quality turns out to be the bottleneck.
-3. **Ingestion** (`scripts/ingest.py`): walk `corpus/*.md`, chunk by markdown
-   headers with a ~500-token fallback split, assign STABLE ids
-   (`{filename}#{section}#{i}`), and `upsert` into a Chroma
-   PersistentClient(path="./chroma_data") collection with metadata
-   (source_file, section). The script must be idempotent: running it twice
-   yields no duplicates. Put logic in functions; keep the
-   `if __name__ == "__main__"` block to a single main() call. Add a unit test
-   for the chunking function (pure function, no Chroma needed). Decision:
-   estimate token count with a simple heuristic (e.g. `len(text) // 4`), no
-   `tiktoken` dependency -- it's only a splitting ceiling, not billed usage,
-   and a heuristic is model-agnostic (works the same whether the corpus ends
-   up embedded/answered by OpenAI or Ollama).
-4. **ChromaCorpusRetriever**: implement `retrieve`. Build client and collection
-   once in `__init__`. Convert Chroma distances to a higher-is-better score
-   (score = 1 - distance) at this boundary. Map results to RetrievedChunk.
-5. **OpenAIAnswerGenerator**: implement `generate` using the openai client.
-   Constructor takes `model` and optional `base_url` so the same adapter works
-   against Ollama (OpenAI-compatible). Decision: default `base_url` to a local
-   Ollama server (`http://localhost:11434/v1`, model e.g. `llama3.1`) so
-   real-RAG development costs nothing; point at the real OpenAI API via env
-   vars (`ITW_ME_MODEL`, and an `ITW_ME_LLM_BASE_URL` or similar) once
-   production-quality answers are wanted. System prompt: the bot speaks AS
-   Antoine in first person, answers ONLY from provided excerpts, and must say
-   it does not know when the excerpts do not contain the answer. Replay
-   `history` as alternating user/assistant messages. Label each context chunk
-   with `[source_file#chunk_id]` in the prompt. Build Citations from the
-   chunks actually included in the prompt. Fill input_tokens/output_tokens
-   from `response.usage` (Ollama's OpenAI-compatible endpoint fills this too).
-   API key comes from the OPENAI_API_KEY env var (Ollama ignores it, but the
-   openai client requires the field to be set to *something*); never hardcode
-   secrets.
-6. ~~**Fake generator for dev**: add a CannedAnswerGenerator adapter and switch
-   on env var ITW_ME_FAKE_LLM=1~~ -- done in Phase 1, ahead of schedule.
-7. Uncomment/add the needed dependencies in pyproject.toml: `chromadb`,
-   `openai`, and `python-dotenv` (composition root calls `load_dotenv()` once,
-   so `OPENAI_API_KEY` and friends can live in a local, gitignored `.env`
-   instead of exported shell variables).
+2. ~~**Shared config**~~ -- done:
+   `src/itw_me/adapters/outbound/chroma_config.py` holds `COLLECTION_NAME`,
+   `PERSIST_DIR`, and `get_embedding_function()`/`get_chroma_client()`/
+   `get_collection()`, imported by both `scripts/ingest.py` and
+   `ChromaCorpusRetriever`. Uses Chroma's built-in default embedding function
+   (local ONNX `all-MiniLM-L6-v2`) -- no API key, no network call per query.
+   Note: it downloads its ~80MB model file on first use (cached afterwards),
+   which is why tests mock the Chroma boundary rather than exercising it.
+3. ~~**Ingestion**~~ -- done: the pure chunking logic lives in
+   `src/itw_me/adapters/outbound/corpus_chunking.py` (`chunk_file`), unit
+   tested in `tests/test_corpus_chunking.py` with no Chroma import.
+   `scripts/ingest.py` walks `corpus/*.md`, chunks, and `upsert`s into Chroma
+   with stable ids (`{filename}#{section-slug}#{i}`); verified idempotent by
+   running it twice (95 chunks both times, no duplicates). Token estimate is
+   the heuristic `len(text) // 4`, no `tiktoken` dependency.
+4. ~~**ChromaCorpusRetriever**~~ -- done: builds the client/collection once in
+   `__init__`, converts distance to `score = 1 - distance`. Tested by mocking
+   `chroma_config.get_chroma_client`/`get_collection` (no real embedding calls
+   in tests); verified for real against the ingested corpus too.
+5. ~~**OpenAIAnswerGenerator**~~ -- done: first-person system prompt grounded
+   only in retrieved excerpts, `[source_file#chunk_id]` labels, history
+   replayed as alternating user/assistant messages, citations built from the
+   chunks actually placed in the prompt, tokens filled from `response.usage`.
+   Defaults to a local Ollama server (`http://localhost:11434/v1`,
+   `llama3.1`); override `ITW_ME_LLM_BASE_URL`/`ITW_ME_MODEL`/
+   `OPENAI_API_KEY` for the real OpenAI API. Tested by patching the `OpenAI`
+   class (no network).
+6. ~~**Fake generator for dev**~~ -- done in Phase 1, ahead of schedule.
+7. ~~Dependencies~~ -- done: `chromadb`, `openai`, `python-dotenv` added to
+   `pyproject.toml`; `container.py` calls `load_dotenv()`; `.env.example`
+   documents the variables; `chroma_data/` gitignored.
 
 ## Definition of done
 
-- `pytest` green, offline, no keys needed.
-- After running ingest, with `ITW_ME_FAKE_LLM=0` and a local Ollama server
-  running: answers are grounded in the corpus and include citations -- no
-  OpenAI key required for this.
-- Swapping `ITW_ME_LLM_BASE_URL`/`ITW_ME_MODEL` (or unsetting them) to point
-  at the real OpenAI API works with the same adapter, unchanged.
-- `grep -r "import chromadb\|import openai" src/itw_me/domain
-  src/itw_me/application` returns nothing.
+- [x] `pytest` green, offline, no keys needed (14 tests).
+- [x] `grep -r "import chromadb\|import openai" src/itw_me/domain
+      src/itw_me/application` returns nothing.
+- [x] Real ingest + real retrieval verified end to end (no mocks) against
+      the actual corpus: 95 chunks ingested, idempotent re-run, sensible
+      `RetrievedChunk`s back for real queries.
+- [x] Real end-to-end generation against Ollama -- verified with zero
+      environment overrides (just `ITW_ME_FAKE_LLM=0`): Ollama installed
+      via `brew install ollama`, running as a persistent service
+      (`brew services start ollama`), `llama3.1` pulled. Asked "What
+      programming languages do you know?" through the running API and
+      got back the correct list (Python 4.7, SQL 4.0, C++ 3.5, Rust 3.0,
+      R 2.5) with citations into `cv.md`. A follow-up question reusing
+      conversation history was also answered correctly, confirming
+      history replay works, not just single-turn retrieval.
 
-Work through 2.2, 2.3, 2.4, 2.5, 2.7 in order, running the test suite after each
-step. If a design decision is ambiguous, prefer the option that keeps the domain
-ignorant of technology. Next: [phase3_spec.md](phase3_spec.md) (observability),
-once this phase is verified end to end.
+Next: [phase3_spec.md](phase3_spec.md) (observability).

@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# itw-me: local Chroma vector store (rebuilt by scripts/ingest.py)
+chroma_data/

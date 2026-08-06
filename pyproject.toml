@@ -8,8 +8,9 @@ dependencies = [
     "uvicorn",
     "pydantic",
     # phase 2:
-    # "chromadb",
-    # "openai",
+    "chromadb",
+    "openai",
+    "python-dotenv",
     # phase 3:
     # "opentelemetry-api",
     # "opentelemetry-sdk",

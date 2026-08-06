@@ -1,24 +1,43 @@
-"""TODO(antoine): LLM implementation of AnswerGenerator.
+"""OpenAI(-compatible) implementation of AnswerGenerator.
 
-Suggested approach (any OpenAI-compatible API works, including a
-local Ollama server if you want zero cost):
-- Build the prompt: system message ("You are Antoine's CV speaking
-  in first person...") + retrieved chunks as context + history + question.
-- Call the chat completions endpoint.
-- Fill Answer.input_tokens / output_tokens from the usage field of
-  the response; you will want these in phase 3 for metrics.
-- Build Citations from the chunks you actually put in the prompt.
+The openai client works against any server that speaks its wire format --
+that includes Ollama, which exposes an OpenAI-compatible endpoint. This
+adapter only knows "some chat-completions endpoint"; which server that
+actually is is a composition-root decision (see container.py), passed in
+via `base_url`. That is what makes the phase-2 decision -- Ollama by
+default for zero-cost development, real OpenAI as an opt-in -- a config
+change instead of a code change.
 
-Same rule as the retriever: the openai import lives here and only here.
+Every openai import stays in this file. If it leaks into domain/ or
+application/, the hexagon is broken.
 """
 
-from itw_me.domain.models import Answer, Question, RetrievedChunk
+from openai import OpenAI
+
+from itw_me.domain.models import Answer, Citation, Question, RetrievedChunk
 from itw_me.domain.ports import AnswerGenerator
+
+_SYSTEM_PROMPT = (
+    "You are Antoine, speaking to a visitor in the first person. Answer "
+    "ONLY using the excerpts below, which are drawn from your own CV and "
+    "biography. If the excerpts do not contain the answer, say plainly "
+    "that you don't know or that it isn't covered in your notes -- never "
+    "invent facts about yourself."
+)
 
 
 class OpenAIAnswerGenerator(AnswerGenerator):
-    def __init__(self, model: str = "gpt-4o-mini") -> None:
+    def __init__(
+        self,
+        model: str,
+        base_url: str | None = None,
+        api_key: str | None = None,
+    ) -> None:
         self._model = model
+        # The openai client raises at construction time if api_key is
+        # falsy, even against servers (Ollama) that ignore it entirely --
+        # so a dummy placeholder stands in when none is configured.
+        self._client = OpenAI(base_url=base_url, api_key=api_key or "not-needed")
 
     def generate(
         self,
@@ -26,4 +45,56 @@ class OpenAIAnswerGenerator(AnswerGenerator):
         context: list[RetrievedChunk],
         history: list,
     ) -> Answer:
-        raise NotImplementedError
+        messages = [
+            {"role": "system", "content": self._build_system_message(context)}
+        ]
+        # history is list[Exchange] (see domain/models.py); replayed as
+        # alternating user/assistant turns so the model sees the
+        # conversation so far, not just the latest question in isolation.
+        for exchange in history:
+            messages.append({"role": "user", "content": exchange.question.text})
+            if exchange.answer is not None:
+                messages.append(
+                    {"role": "assistant", "content": exchange.answer.text}
+                )
+        messages.append({"role": "user", "content": question.text})
+
+        response = self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+        )
+
+        # Citations reflect exactly the chunks placed in the prompt above
+        # (i.e. all of `context`) -- if retrieval returned nothing, there
+        # is nothing to cite, which is the honest answer.
+        citations = tuple(
+            Citation(
+                source_file=chunk.source_file,
+                chunk_id=chunk.chunk_id,
+                excerpt=chunk.text,
+            )
+            for chunk in context
+        )
+
+        usage = response.usage
+        return Answer(
+            text=response.choices[0].message.content or "",
+            citations=citations,
+            input_tokens=usage.prompt_tokens if usage else 0,
+            output_tokens=usage.completion_tokens if usage else 0,
+        )
+
+    @staticmethod
+    def _build_system_message(context: list[RetrievedChunk]) -> str:
+        if not context:
+            return f"{_SYSTEM_PROMPT}\n\nNo excerpts were found for this question."
+
+        # Each excerpt is labeled [source_file#chunk_id] -- the same
+        # format api.py uses for the Citations it returns over HTTP, so a
+        # visitor (or the model, if asked to cite) sees one consistent
+        # reference scheme end to end.
+        excerpts = "\n\n".join(
+            f"[{chunk.source_file}#{chunk.chunk_id}] {chunk.text}"
+            for chunk in context
+        )
+        return f"{_SYSTEM_PROMPT}\n\nExcerpts:\n{excerpts}"
