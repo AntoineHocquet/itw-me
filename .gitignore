@@ -219,3 +219,9 @@ __marimo__/
 
 # itw-me: local Chroma vector store (rebuilt by scripts/ingest.py)
 chroma_data/
+
+# itw-me: this project pins deps via pyproject.toml + plain `uv pip
+# install`, not uv's project-lock workflow -- ignore uv.lock in case
+# `uv run` (rather than the Taskfile's .venv/bin/* calls) ever generates
+# one again.
+uv.lock

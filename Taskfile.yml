@@ -1,0 +1,116 @@
+# Task runner for itw-me (https://taskfiles.dev). Run `task` with no
+# arguments to list everything below; `task <name>` to run one.
+#
+# Tasks call ./.venv/bin/<tool> directly rather than `uv run`: this
+# project manages its venv/deps with plain `uv venv` + `uv pip install`
+# (matching pyproject.toml's ordinary dependencies list, no [tool.uv]
+# section), not uv's project-lock workflow -- `uv run` would silently
+# generate and maintain a uv.lock as a side effect, which isn't part of
+# how this project is set up.
+version: "3"
+
+tasks:
+  default:
+    desc: List all available tasks.
+    silent: true
+    cmds:
+      - task --list
+
+  venv:
+    desc: Create ./.venv if it doesn't exist yet (internal helper).
+    internal: true
+    status:
+      # `status` commands are go-task's idempotency check: if they all
+      # exit 0, the task is considered already-done and is skipped. This
+      # is what stops `task install` from recreating the venv every run.
+      - test -d .venv
+    cmds:
+      - uv venv --python 3.12 .venv
+
+  install:
+    desc: Create/refresh .venv and install the project with dev dependencies.
+    deps: [venv]
+    cmds:
+      - uv pip install -e ".[dev]"
+
+  test:
+    desc: Run the test suite (offline, no keys or network needed).
+    deps: [install]
+    cmds:
+      - .venv/bin/pytest -q
+
+  ingest:
+    desc: Chunk corpus/*.md and upsert into the local Chroma store (./chroma_data).
+    deps: [install]
+    cmds:
+      - .venv/bin/python scripts/ingest.py
+
+  run:
+    desc: >-
+      Run the API in offline/canned mode (default: ITW_ME_FAKE_LLM=1,
+      no external services needed).
+    deps: [install]
+    cmds:
+      - .venv/bin/uvicorn itw_me.adapters.inbound.api:app
+
+  run:llama:
+    desc: >-
+      Run the API against a local Ollama server for real RAG
+      (ITW_ME_FAKE_LLM=0). Requires `ollama serve` running and the
+      model from ITW_ME_MODEL (default llama3.1) already pulled, and
+      the corpus already ingested (see the `ingest` task).
+    deps: [install]
+    env:
+      ITW_ME_FAKE_LLM: "0"
+    cmds:
+      - .venv/bin/uvicorn itw_me.adapters.inbound.api:app
+
+  chat:
+    desc: >-
+      Interactive REPL against a running API: starts one interview,
+      then loops asking your questions and printing the answers, so
+      you don't have to copy interview_ids between curl calls by hand.
+      Requires `task run` or `task run:llama` already running in
+      another terminal. Empty line or Ctrl+D quits. Override the target
+      with `task chat API_URL=http://127.0.0.1:8001`.
+    deps: [install]
+    interactive: true
+    vars:
+      API_URL: '{{.API_URL | default "http://127.0.0.1:8000"}}'
+    cmds:
+      - |
+        set -eu
+
+        fail() {
+          echo "$1 -- is 'task run' or 'task run:llama' running in another terminal?" >&2
+          exit 1
+        }
+
+        RAW=$(curl -sf -X POST "{{.API_URL}}/interviews") \
+          || fail "Could not reach {{.API_URL}}/interviews"
+        INTERVIEW_ID=$(printf '%s' "$RAW" \
+          | .venv/bin/python -c "import sys, json; print(json.load(sys.stdin)['interview_id'])")
+        echo "Interview started: $INTERVIEW_ID (against {{.API_URL}})"
+        echo "Type a question and press Enter. Empty line or Ctrl+D quits."
+        while true; do
+          printf '> '
+          IFS= read -r question || break
+          [ -z "$question" ] && break
+          payload=$(.venv/bin/python -c "import json, sys; print(json.dumps({'text': sys.argv[1]}))" "$question")
+          # A failed request here shouldn't crash the whole REPL with a
+          # confusing traceback (e.g. from feeding an empty response into
+          # json.load) -- report it and let the user try again or quit.
+          RAW=$(curl -sf -X POST "{{.API_URL}}/interviews/$INTERVIEW_ID/questions" \
+              -H 'Content-Type: application/json' -d "$payload") \
+            || { echo "Request failed -- is the server at {{.API_URL}} still running?" >&2; continue; }
+          printf '%s' "$RAW" | .venv/bin/python -c "
+        import json, sys
+        data = json.load(sys.stdin)
+        print()
+        print(data['answer'])
+        if data.get('citations'):
+            print('Sources: ' + ', '.join(data['citations']))
+        print()
+        "
+        done
+        echo "Bye."
