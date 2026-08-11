@@ -19,7 +19,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "httpx"]
+dev = ["pytest", "httpx", "langfuse"]
+# Only needed to actually run with LANGFUSE_PUBLIC_KEY/SECRET_KEY set;
+# `dev` above already includes it so tests can import/mock the client
+# without hitting the network. See docs/langfuse_spec.md.
+langfuse = ["langfuse"]
 
 [build-system]
 requires = ["setuptools>=68"]

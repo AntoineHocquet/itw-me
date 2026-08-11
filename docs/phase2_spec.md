@@ -108,4 +108,6 @@ clear code over clever code.
       conversation history was also answered correctly, confirming
       history replay works, not just single-turn retrieval.
 
-Next: [phase3_spec.md](phase3_spec.md) (observability).
+Next: [phase3_spec.md](phase3_spec.md) (logging & correlation IDs -- the first
+of a Phase 3-6 observability sequence, each phase mapped 1:1 to a step of a real
+VOLT observability ticket; see phase3_spec.md's Context for why).

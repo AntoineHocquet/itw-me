@@ -36,6 +36,7 @@ def build_interview_service() -> InterviewService:
 
     retriever: CorpusRetriever
     generator: AnswerGenerator
+    model_name: str | None = None
     if use_fake_llm:
         retriever = CannedCorpusRetriever()
         generator = CannedAnswerGenerator()
@@ -49,12 +50,33 @@ def build_interview_service() -> InterviewService:
         # OPENAI_API_KEY) for production-quality answers -- no code changes,
         # only configuration.
         retriever = ChromaCorpusRetriever()
+        model_name = os.getenv("ITW_ME_MODEL", "llama3.1")
         generator = OpenAIAnswerGenerator(
-            model=os.getenv("ITW_ME_MODEL", "llama3.1"),
+            model=model_name,
             base_url=os.getenv("ITW_ME_LLM_BASE_URL", "http://localhost:11434/v1"),
             # Ollama ignores this value entirely, but the openai client
             # requires api_key to be set to *something*.
             api_key=os.getenv("OPENAI_API_KEY", "ollama"),
+        )
+
+    # Optional Langfuse tracing (see docs/langfuse_spec.md): wraps whichever
+    # generator was chosen above. Only imported here, inside the branch that
+    # actually needs it -- with the env vars unset (the default), `langfuse`
+    # is never imported at all, so it stays a true no-op without the
+    # optional dependency installed.
+    langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+    if langfuse_public_key and langfuse_secret_key:
+        from itw_me.adapters.outbound.generator_langfuse import (
+            LangfuseTracedAnswerGenerator,
+        )
+
+        generator = LangfuseTracedAnswerGenerator(
+            wrapped=generator,
+            public_key=langfuse_public_key,
+            secret_key=langfuse_secret_key,
+            host=os.getenv("LANGFUSE_HOST"),
+            model=model_name,
         )
 
     return InterviewService(

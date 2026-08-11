@@ -83,3 +83,12 @@ first. To use the real OpenAI API instead, set `ITW_ME_LLM_BASE_URL`,
 `ITW_ME_MODEL`, and `OPENAI_API_KEY` (see .env.example). Retrieval
 (ChromaCorpusRetriever) is always real and needs no key either way --
 embeddings run locally via Chroma's built-in model.
+
+## Optional: Langfuse tracing
+
+Set `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` (see .env.example)
+to trace every `generate()` call -- prompt, retrieved context, tokens,
+latency -- to a Langfuse project. Unset (the default): no Langfuse code
+runs at all, `pip install -e ".[dev]"` alone is enough. See
+[docs/langfuse_spec.md](docs/langfuse_spec.md) for why this lives
+outside the observability phase sequence below.
