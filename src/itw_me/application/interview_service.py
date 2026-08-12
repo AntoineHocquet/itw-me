@@ -25,13 +25,24 @@ definition of every metric name this codebase records, INCLUDING the
 two `InterviewService.__init__` recreates below under the same names --
 see that module's docstring for why application/ can't just import
 `Instruments` and has to duplicate those two definitions instead.
+
+Phase 5 note on the `opentelemetry.trace` import below: same exception
+again, third package. Unlike Counter/Histogram, a `Tracer` carries no
+name/description metadata that could drift out of sync with a canonical
+definition elsewhere -- `trace.get_tracer("itw_me")` is cheap and
+idempotent, so there is no infrastructure/telemetry.py-style bundle to
+duplicate from here. It is still a constructor parameter rather than a
+bare module-level call, purely so tests can inject one built from their
+own local TracerProvider -- see tests/test_interview_service.py and
+infrastructure/tracing.py's docstring for why that matters.
 """
 
 import logging
 import time
 
-from opentelemetry import metrics
+from opentelemetry import metrics, trace
 from opentelemetry.metrics import Counter, Histogram
+from opentelemetry.trace import Tracer
 
 from itw_me.application.request_context import interaction_id_var
 from itw_me.domain.models import Answer, Interview
@@ -52,10 +63,12 @@ class InterviewService:
         repository: InterviewRepository,
         questions_total: Counter | None = None,
         request_latency_seconds: Histogram | None = None,
+        tracer: Tracer | None = None,
     ) -> None:
         self._retriever = retriever
         self._generator = generator
         self._repository = repository
+        self._tracer = tracer or trace.get_tracer("itw_me")
 
         # Phase 4: container.py passes in the REAL instruments it built
         # via infrastructure/telemetry.py's configure_metrics(). Tests
@@ -125,118 +138,128 @@ class InterviewService:
         "end-to-end ask_question latency" (docs/phase4_spec.md) means the
         whole use case, and a request that 404s is still a request worth
         counting toward an error rate, not a metric-shaped blind spot.
+
+        Phase 5 instrumentation point: the same entire method also runs
+        inside a root "ask_question" span. `retrieve()`/`generate()`
+        below call into TracedCorpusRetriever/TracedAnswerGenerator,
+        which each open their OWN span the moment they run -- OTel nests
+        those under this one automatically, purely because they execute
+        while this span is still open. Nothing here has to know that.
         """
-        started_at = time.monotonic()
-        # Pessimistic by default: `status` only ever flips to "ok" on the
-        # single line right before this method's normal return, a few
-        # dozen lines down. Every early exit -- the ValueError below, or
-        # any exception self._retriever/self._generator/self._repository
-        # raises -- skips that line and the `finally` at the bottom sees
-        # "error", with no separate except-and-relabel logic needed for
-        # each of those different failure points.
-        status = "error"
-        try:
-            # 1. Load the interview. Not-found is a domain-level fact, not
-            # an HTTP concept, so we signal it with a plain exception
-            # (ValueError) rather than importing HTTPException here. The
-            # inbound adapter (api.py) is the one that knows what a 404
-            # is, and it's the one that translates this into it.
-            interview = self._repository.get(interview_id)
-            if interview is None:
-                raise ValueError(f"No interview found with id {interview_id!r}")
-
-            # Snapshot the conversation *before* appending the current
-            # question: the generator port receives the new question
-            # separately, so history here means "everything already
-            # answered", not "including the turn we're about to produce".
-            history = interview.history
-
-            # 2. Record the question on the aggregate. This is where the
-            # domain enforces its own rules (e.g. Interview.ask appending
-            # a pending Exchange) -- the service just calls the method,
-            # it doesn't reimplement the invariant.
-            question = interview.ask(text)
-
-            # `interview.ask` just appended a brand-new Exchange (with its
-            # own fresh `id`, see domain/models.py) to the aggregate. We read
-            # it back via `.history` -- the same read-only view used above,
-            # never `.exchanges` directly -- to stay consistent with "outside
-            # code only reads the aggregate through its exposed surface".
-            current_exchange_id = interview.history[-1].id
-
-            # Bind this turn's id into the request-scoped ContextVar (see
-            # application/request_context.py for why it lives there) so it
-            # rides along on every log line for the rest of this turn --
-            # `logger.info(...)` calls below AND, transitively, anything the
-            # adapters behind self._retriever/self._generator log too.
-            #
-            # `.set()` returns a Token specifically so it can be undone with
-            # `.reset(token)` -- NOT setting it back to `None` by hand, which
-            # would be wrong the moment this code is ever called re-entrantly
-            # (e.g. nested inside another traced operation later on): reset()
-            # restores the exact prior value, whatever it was, while a bare
-            # `.set(None)` would clobber it.
-            token = interaction_id_var.set(current_exchange_id)
+        with self._tracer.start_as_current_span("ask_question"):
+            started_at = time.monotonic()
+            # Pessimistic by default: `status` only ever flips to "ok" on
+            # the single line right before this method's normal return, a
+            # few dozen lines down. Every early exit -- the ValueError
+            # below, or any exception self._retriever/self._generator/
+            # self._repository raises -- skips that line and the `finally`
+            # at the bottom sees "error", with no separate except-and-
+            # relabel logic needed for each of those different failure
+            # points.
+            status = "error"
             try:
-                # 3. Retrieve context chunks via the retriever port.
-                logger.info(
-                    "retrieving corpus chunks",
-                    extra={"question_length": len(text)},
-                )
-                context = self._retriever.retrieve(text)
+                # 1. Load the interview. Not-found is a domain-level fact,
+                # not an HTTP concept, so we signal it with a plain
+                # exception (ValueError) rather than importing
+                # HTTPException here. The inbound adapter (api.py) is the
+                # one that knows what a 404 is, and it's the one that
+                # translates this into it.
+                interview = self._repository.get(interview_id)
+                if interview is None:
+                    raise ValueError(f"No interview found with id {interview_id!r}")
 
-                # 4. Generate an answer via the generator port, passing the
-                # prior history so the LLM (or fake) has conversation context.
-                logger.info(
-                    "generating answer",
-                    extra={"retrieved_chunk_count": len(context)},
-                )
-                answer = self._generator.generate(question, context, history)
+                # Snapshot the conversation *before* appending the current
+                # question: the generator port receives the new question
+                # separately, so history here means "everything already
+                # answered", not "including the turn we're about to produce".
+                history = interview.history
 
-                # 5. Record the answer on the aggregate (enforces that there
-                # was a pending question -- see Interview.record_answer).
-                interview.record_answer(answer)
+                # 2. Record the question on the aggregate. This is where the
+                # domain enforces its own rules (e.g. Interview.ask appending
+                # a pending Exchange) -- the service just calls the method,
+                # it doesn't reimplement the invariant.
+                question = interview.ask(text)
 
-                # 6. Persist the whole interview, not just the answer: the
-                # repository port only knows how to save/load Interview
-                # aggregates, matching the "aggregate root" rule in
-                # domain/models.py.
-                self._repository.save(interview)
-                logger.info(
-                    "recorded answer",
-                    extra={
-                        "input_tokens": answer.input_tokens,
-                        "output_tokens": answer.output_tokens,
-                        "citation_count": len(answer.citations),
-                    },
-                )
+                # `interview.ask` just appended a brand-new Exchange (with its
+                # own fresh `id`, see domain/models.py) to the aggregate. We read
+                # it back via `.history` -- the same read-only view used above,
+                # never `.exchanges` directly -- to stay consistent with "outside
+                # code only reads the aggregate through its exposed surface".
+                current_exchange_id = interview.history[-1].id
+
+                # Bind this turn's id into the request-scoped ContextVar (see
+                # application/request_context.py for why it lives there) so it
+                # rides along on every log line for the rest of this turn --
+                # `logger.info(...)` calls below AND, transitively, anything the
+                # adapters behind self._retriever/self._generator log too.
+                #
+                # `.set()` returns a Token specifically so it can be undone with
+                # `.reset(token)` -- NOT setting it back to `None` by hand, which
+                # would be wrong the moment this code is ever called re-entrantly
+                # (e.g. nested inside another traced operation later on): reset()
+                # restores the exact prior value, whatever it was, while a bare
+                # `.set(None)` would clobber it.
+                token = interaction_id_var.set(current_exchange_id)
+                try:
+                    # 3. Retrieve context chunks via the retriever port.
+                    logger.info(
+                        "retrieving corpus chunks",
+                        extra={"question_length": len(text)},
+                    )
+                    context = self._retriever.retrieve(text)
+
+                    # 4. Generate an answer via the generator port, passing the
+                    # prior history so the LLM (or fake) has conversation context.
+                    logger.info(
+                        "generating answer",
+                        extra={"retrieved_chunk_count": len(context)},
+                    )
+                    answer = self._generator.generate(question, context, history)
+
+                    # 5. Record the answer on the aggregate (enforces that there
+                    # was a pending question -- see Interview.record_answer).
+                    interview.record_answer(answer)
+
+                    # 6. Persist the whole interview, not just the answer: the
+                    # repository port only knows how to save/load Interview
+                    # aggregates, matching the "aggregate root" rule in
+                    # domain/models.py.
+                    self._repository.save(interview)
+                    logger.info(
+                        "recorded answer",
+                        extra={
+                            "input_tokens": answer.input_tokens,
+                            "output_tokens": answer.output_tokens,
+                            "citation_count": len(answer.citations),
+                        },
+                    )
+                finally:
+                    # However this turn ends -- success, or self._retriever /
+                    # self._generator raising -- the interaction_id must stop
+                    # applying once the turn is over. Without this, a later,
+                    # unrelated log line (e.g. the next request reusing this
+                    # same OS thread's context in a sync test, or any code that
+                    # runs after this method returns) could be mislabeled with a
+                    # turn that already finished.
+                    interaction_id_var.reset(token)
+
+                # Deliberately NOT logging the question or answer text here: the
+                # same discipline metrics labels already follow elsewhere in this
+                # codebase (never put unbounded/free-text values where they'll
+                # be indexed or aggregated) -- lengths and counts tell you the
+                # shape of what happened without a log aggregator ending up
+                # holding a copy of every visitor's question forever.
+
+                status = "ok"
+                # 7. Return the answer; the inbound adapter maps it to a DTO.
+                return answer
             finally:
-                # However this turn ends -- success, or self._retriever /
-                # self._generator raising -- the interaction_id must stop
-                # applying once the turn is over. Without this, a later,
-                # unrelated log line (e.g. the next request reusing this
-                # same OS thread's context in a sync test, or any code that
-                # runs after this method returns) could be mislabeled with a
-                # turn that already finished.
-                interaction_id_var.reset(token)
-
-            # Deliberately NOT logging the question or answer text here: the
-            # same discipline metrics labels already follow elsewhere in this
-            # codebase (never put unbounded/free-text values where they'll
-            # be indexed or aggregated) -- lengths and counts tell you the
-            # shape of what happened without a log aggregator ending up
-            # holding a copy of every visitor's question forever.
-
-            status = "ok"
-            # 7. Return the answer; the inbound adapter maps it to a DTO.
-            return answer
-        finally:
-            # Outermost finally: runs on every exit path -- the happy
-            # return above, the ValueError, or an adapter exception --
-            # which is exactly what "end-to-end" requires. `status` is
-            # just a local variable at this point, holding whatever it
-            # was last set to: "error" (its initial value, if nothing
-            # below ever ran) or "ok" (if execution reached the line
-            # right before `return answer`).
-            self._questions_total.add(1, {"status": status})
-            self._request_latency_seconds.record(time.monotonic() - started_at)
+                # Outermost finally: runs on every exit path -- the happy
+                # return above, the ValueError, or an adapter exception --
+                # which is exactly what "end-to-end" requires. `status` is
+                # just a local variable at this point, holding whatever it
+                # was last set to: "error" (its initial value, if nothing
+                # below ever ran) or "ok" (if execution reached the line
+                # right before `return answer`).
+                self._questions_total.add(1, {"status": status})
+                self._request_latency_seconds.record(time.monotonic() - started_at)

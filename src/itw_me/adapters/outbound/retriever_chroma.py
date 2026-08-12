@@ -7,11 +7,30 @@ lives or how it's embedded.
 
 Every chromadb import stays in this file (and in chroma_config.py). If
 chromadb leaks into domain/ or application/, the hexagon is broken.
+
+Phase 5 note: this file gets a SPAN, not a decorator, unlike the
+workflow-level "retrieve" span (TracedCorpusRetriever). Deliberate
+difference: "retrieve" wraps ANY CorpusRetriever and knows nothing
+vendor-specific; the span below is named and tagged with attributes
+(`chroma.collection_name`) that only make sense for Chroma specifically
+-- knowledge a generic decorator has no business having. It ends up
+nested INSIDE "retrieve" in the trace tree purely because that's the
+call order: TracedCorpusRetriever's span is already open by the time
+this method runs, so OTel's context propagation nests them automatically
+-- nothing here has to know that or arrange it.
 """
 
-from itw_me.adapters.outbound.chroma_config import get_chroma_client, get_collection
+from opentelemetry import trace
+
+from itw_me.adapters.outbound.chroma_config import (
+    COLLECTION_NAME,
+    get_chroma_client,
+    get_collection,
+)
 from itw_me.domain.models import RetrievedChunk
 from itw_me.domain.ports import CorpusRetriever
+
+_tracer = trace.get_tracer("itw_me")
 
 
 class ChromaCorpusRetriever(CorpusRetriever):
@@ -23,10 +42,20 @@ class ChromaCorpusRetriever(CorpusRetriever):
         self._collection = get_collection(client)
 
     def retrieve(self, query: str, k: int = 4) -> list[RetrievedChunk]:
-        # query_texts takes a batch; we always send exactly one query,
-        # so every result list below has exactly one element -- hence
-        # indexing [0] throughout instead of a nested loop.
-        results = self._collection.query(query_texts=[query], n_results=k)
+        # Attributes: collection name and k, never the query text --
+        # same cardinality/PII discipline Phase 4's metric labels
+        # already follow. A span attribute isn't stored as a Prometheus
+        # time series, so the concern here isn't cardinality explosion;
+        # it's simply that a visitor's question has no business sitting
+        # in a tracing backend indefinitely either.
+        with _tracer.start_as_current_span(
+            "chroma.query",
+            attributes={"chroma.collection_name": COLLECTION_NAME, "chroma.n_results": k},
+        ):
+            # query_texts takes a batch; we always send exactly one query,
+            # so every result list below has exactly one element -- hence
+            # indexing [0] throughout instead of a nested loop.
+            results = self._collection.query(query_texts=[query], n_results=k)
 
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]

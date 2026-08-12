@@ -9,6 +9,20 @@ by whatever Formatter is attached to the root logger). That separation
 is exactly what lets application/interview_service.py call plain stdlib
 `logging` directly -- logging usage is not a vendor dependency, only the
 *formatting policy* below is infrastructure's job to decide.
+
+Phase 5 update on `trace_id`: originally (Phase 3) this formatter read a
+hand-rolled `trace_id_var` ContextVar, reserved for exactly this phase to
+populate. It turned out unnecessary and was DELETED rather than kept:
+`opentelemetry.trace.get_current_span()` already tracks "the currently
+active span," and it already does so via the exact same `contextvars`
+mechanism `trace_id_var` was hand-rolling -- OTel ships its own version
+of the thing Phase 3 built from scratch, because every tracing SDK needs
+it. Once Phase 5 introduces a real tracer, asking OTel directly is both
+less code and automatically correct the moment ANY span is active,
+anywhere, with no separate "remember to also update trace_id_var" step
+at each of the several places Phase 5 creates spans. Keeping the old
+ContextVar around, now permanently unused, would have been strictly
+worse than deleting it.
 """
 
 from __future__ import annotations
@@ -18,11 +32,9 @@ import logging
 import sys
 from datetime import datetime, timezone
 
-from itw_me.application.request_context import (
-    correlation_id_var,
-    interaction_id_var,
-    trace_id_var,
-)
+from opentelemetry import trace as otel_trace
+
+from itw_me.application.request_context import correlation_id_var, interaction_id_var
 
 # Every attribute a stdlib LogRecord carries out of the box (see the
 # logging module's source for the authoritative list). Anything a log
@@ -58,6 +70,16 @@ class _JsonFormatter(logging.Formatter):
         self._environment = environment
 
     def format(self, record: logging.LogRecord) -> str:
+        # get_current_span() NEVER returns None -- with no span active,
+        # it returns a sentinel "non-recording" span whose context has
+        # is_valid=False. Checking that, rather than checking for None,
+        # is the correct way to ask "is there really a trace right now"
+        # with this API. trace_id is a 128-bit int; formatting it as 32
+        # lowercase hex digits matches the form every tracing backend
+        # (Jaeger included) displays and searches by.
+        span_context = otel_trace.get_current_span().get_span_context()
+        trace_id = format(span_context.trace_id, "032x") if span_context.is_valid else None
+
         payload = {
             # record.created is a Unix timestamp (float seconds since the
             # epoch -- timezone-agnostic by construction). Deliberately
@@ -80,10 +102,7 @@ class _JsonFormatter(logging.Formatter):
             # correlation_id: null, rather than raising.
             "correlation_id": correlation_id_var.get(),
             "interaction_id": interaction_id_var.get(),
-            # Always null until Phase 5 -- see request_context.py's
-            # comment on trace_id_var for why that's a deliberate,
-            # already-wired-up "not yet" rather than a missing field.
-            "trace_id": trace_id_var.get(),
+            "trace_id": trace_id,
         }
 
         # Fold in whatever a call site attached via `extra={...}` -- e.g.

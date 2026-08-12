@@ -1,4 +1,4 @@
-"""Cross-cutting request context: correlation, interaction, and trace ids.
+"""Cross-cutting request context: correlation and interaction ids.
 
 WHY THIS FILE LIVES IN application/, NOT infrastructure/
 ----------------------------------------------------------
@@ -12,15 +12,22 @@ put these declarations in infrastructure/ and have InterviewService
 would be an application -> infrastructure import, which is exactly the
 direction this codebase forbids.
 
-The three ids below need to be both *written* and *read* from different
+The two ids below need to be both *written* and *read* from different
 layers:
   - InterviewService (application/) WRITES interaction_id_var, mid-use-case
     (see interview_service.py) -- a same-layer import, always legal.
   - The ASGI middleware (adapters/inbound/api.py) WRITES correlation_id_var
     -- an outer layer (adapters) importing an inner one (application),
     which is always the allowed direction.
-  - The JSON log formatter (infrastructure/logging.py) READS all three --
+  - The JSON log formatter (infrastructure/logging.py) READS both --
     again outer (infrastructure) importing inner (application), allowed.
+
+Note what's NOT here any more: Phase 3 also reserved a `trace_id_var`
+here, for Phase 5 to eventually populate. Phase 5 deleted it instead --
+`opentelemetry.trace.get_current_span()` already tracks the active span
+via this exact same ContextVar mechanism internally, so a hand-rolled
+second copy was redundant the moment a real tracer existed. See
+infrastructure/logging.py's module docstring for the full story.
 
 Putting the shared state in the innermost layer that needs to touch it,
 rather than in whichever layer happens to *use* it most, is what keeps
@@ -57,11 +64,3 @@ correlation_id_var: ContextVar[str | None] = ContextVar(
 interaction_id_var: ContextVar[str | None] = ContextVar(
     "interaction_id", default=None
 )
-
-# Reserved for Phase 5 (see docs/phase5_spec.md) -- nothing writes to this
-# yet, so infrastructure/logging.py's formatter always reads back `None`
-# for it today. It is declared here now, ahead of need, specifically so
-# that adding real distributed tracing later is a pure *write-side*
-# change (wherever spans get created, call trace_id_var.set(...)) with
-# zero changes required to the logging code that already reads it.
-trace_id_var: ContextVar[str | None] = ContextVar("trace_id", default=None)

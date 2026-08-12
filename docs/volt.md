@@ -395,11 +395,11 @@ VOLT's own histograms, whatever unit they end up in.
   (request count/latency, retrieval, LLM, tokens); the work is choosing
   label sets for each that stay small and fixed -- `status`, maybe a
   `workflow_step` enum, never anything free-text or per-user.
-- Whatever OTel setup VOLT ends up with, check every histogram it
-  defines against real observed latencies before calling it done.
-  Milliseconds vs. seconds is the specific bug found here, but the
-  general lesson -- default bucket boundaries are a guess, not a fact
-  about your service -- applies regardless of unit.
+  the exact right idea; check every histogram it defines against real
+  observed latencies before calling it done. Milliseconds vs. seconds
+  is the specific bug found here, but the general lesson -- default
+  bucket boundaries are a guess, not a fact about your service -- applies
+  regardless of unit.
 - If VOLT already has *any* metrics pipeline (Azure Monitor's own metrics,
   or an existing OTel setup), the swap-the-exporter property described
   above is the thing to lean on: instrumentation code (counters,
@@ -408,7 +408,133 @@ VOLT's own histograms, whatever unit they end up in.
 
 ## Phase 5 (VOLT's Step 3): distributed tracing
 
-*Not written yet -- add once [phase5_spec.md](phase5_spec.md) is built.*
+### The problem, concretely
+
+Phase 4's metrics can tell you "p95 latency for `generate` went up this
+week." They cannot tell you *why*, for any single request -- was it the
+retrieval step or the LLM call? Was it always slow, or slow starting
+from one specific deploy? A histogram has already thrown away which
+request it came from by the time you're looking at it. Distributed
+tracing is the tool that keeps that information: for *one specific
+request*, exactly which steps ran, in what order, nested how, and how
+long each one took -- a timeline you can actually open and look at,
+not a number you have to infer a story from.
+
+### The core idea: spans, and parent-child nesting for free
+
+A **span** is "one named operation, with a start time and an end time."
+A **trace** is a tree of spans that all happened as part of one logical
+request. The thing worth understanding, because it looks like magic
+otherwise: nothing in this codebase explicitly says "`generate` is a
+child of `ask_question`." The nesting is entirely a side effect of *when
+each span is open*: `ask_question`'s span opens first; while it's still
+open, code inside it opens `generate`'s span; while THAT is still open,
+code inside IT opens the actual LLM-call span. Whichever span is
+"currently open" when a new one starts automatically becomes its parent.
+Same underlying mechanism (Python's `contextvars`) Phase 3 used for
+`correlation_id`, just OTel's own built-in version of it, applied to a
+tree instead of a single flat value.
+
+### What this looked like, concretely
+
+A real trace, from the actual span tree this phase produces for one
+question (captured via the JSON logs' shared `trace_id` -- see below --
+rather than a screenshot, but the shape is exactly what Jaeger renders):
+
+```
+ask_question                          (root -- the whole use case)
+├── retrieve                          (workflow span: the retrieval step)
+│   └── chroma.query                  (dependency span: the actual vector-store call)
+└── generate                          (workflow span: the generation step)
+    └── llm.chat.completions          (dependency span: the actual LLM call)
+```
+
+And the log-correlation payoff, from actually running the app and
+asking one question -- all three application log lines below carry the
+SAME `trace_id`, which previously (Phases 3-4) was always `null`:
+
+```json
+{"message": "retrieving corpus chunks", "trace_id": "cda1d0a5e77b70a4a326f91db4b7e7fb", "correlation_id": "e5d1c89b-...", ...}
+{"message": "generating answer",        "trace_id": "cda1d0a5e77b70a4a326f91db4b7e7fb", "correlation_id": "e5d1c89b-...", ...}
+{"message": "recorded answer",          "trace_id": "cda1d0a5e77b70a4a326f91db4b7e7fb", "correlation_id": "e5d1c89b-...", ...}
+```
+
+That `trace_id` is the same 32-hex-digit id Jaeger's UI would show for
+this request's trace -- click it in either place and you land on the
+same thing. That's VOLT's ticket's "correlate logs, metrics, traces"
+objective, made concrete: one id, generated once, threading through
+every signal without any of them needing to know about each other.
+
+### Two real gotchas, both found only by actually running this
+
+**1. There is exactly one "slot" for a tracer configuration per
+process, ever.** Unlike logging (where reconfiguring the root logger's
+handlers is always allowed, last call wins) and unlike metrics
+(where instruments transparently "upgrade" once a real backend is
+configured, regardless of call order), OTel's tracing API accepts
+`set_tracer_provider()` exactly once -- every later call is silently
+ignored. This has a real, practical consequence for testing: you cannot
+spin up a fresh, isolated tracer configuration per test the way you
+might expect. The fix used here was to make every tracing-aware
+component accept a `Tracer` as a constructor argument (defaulting to the
+real global one), so tests can hand it a fake without ever touching
+global state. Worth knowing before writing VOLT's own tracing tests,
+not after.
+
+**2. A "push" exporter with no collector listening doesn't just fail
+quietly -- it can make your test suite hang, and print something
+alarming afterward.** Same "pull vs. push" distinction as Phase 4's
+Prometheus section, except tracing IS push-based (spans get sent to
+Jaeger, nothing scrapes them). Left at OTel's default retry/backoff
+settings, a missing collector added 6+ seconds to every test run in
+this codebase, and could print a stray `ValueError: I/O operation on
+closed file` traceback at process exit -- cosmetic (exit code stayed 0,
+every test still passed), but exactly the kind of thing that makes
+someone new to a repo think something is broken when nothing is. Fixed
+with short, explicit timeouts on the exporter, plus one test fixture
+that shuts the tracer down cleanly before the interpreter starts tearing
+itself down. If VOLT's own test suite ever adds tracing, budget time to
+hit this same issue and fix it the same way -- it is not specific to
+this codebase, it is inherent to push-based exporters with no listener.
+
+### What this deliberately does not do
+
+- **It doesn't replace Langfuse.** Langfuse's own tracing is purpose-
+  built for LLM calls specifically -- prompts, token-by-token cost,
+  model comparisons. The `llm.chat.completions` span here records that a
+  call happened and how long it took; it is not trying to be a second
+  Langfuse.
+- **It isn't automatic.** Every span in this phase was opened by hand,
+  at a specific line of code someone chose. Auto-instrumentation
+  packages exist (they patch libraries like `requests`/`httpx` to open
+  spans for you) and are worth knowing about, but this phase deliberately
+  used manual instrumentation throughout, to make every "why does this
+  span exist and what does it measure" question answerable by reading
+  the code that opens it.
+- **Two spans, not four**, for the workflow steps
+  (`retrieve`/`generate`, not `plan`/`retrieve`/`reflect`/`generate`) --
+  purely because itw-me has no planning or reflection step, not a
+  coverage gap. VOLT's own agentic workflow should get all four.
+
+### Translating this to VOLT
+
+- VOLT's Step 3 names two things: workflow spans and dependency spans.
+  Both patterns transfer directly -- workflow spans wrap whichever unit
+  of orchestration corresponds to itw-me's `retrieve`/`generate` (for
+  VOLT: `plan`/`retrieve`/`reflect`/`generate`), and dependency spans
+  wrap each of the four vendor calls VOLT's ticket names (Azure OpenAI,
+  Azure AI Search, PostgreSQL, Blob Storage) with vendor-specific
+  attributes, the same way `chroma.query`/`llm.chat.completions` do here.
+- Both gotchas above are worth checking for explicitly, early, rather
+  than discovering them the way this build did (by noticing a slow test
+  suite and an alarming traceback). They are properties of the
+  OpenTelemetry SDK itself, not of this specific codebase.
+- Azure Monitor (VOLT's likely tracing backend, given its ticket's
+  "Current State") speaks OTLP too -- the exporter swap this phase's
+  Phase 4 section already described applies here as well: instrumentation
+  code (where spans open, what they're named, what they're tagged with)
+  shouldn't need to change based on whether it's Jaeger or Azure Monitor
+  receiving them.
 
 ## Phase 6 (VOLT's Step 4): dashboards & alerting
 

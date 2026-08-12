@@ -99,3 +99,45 @@ def test_format_never_raises_on_a_non_json_serializable_extra_value():
     )
 
     assert payload["weird"] == "<unserializable>"
+
+
+def test_format_reads_trace_id_from_the_currently_active_span():
+    """Phase 5. Uses a REAL, throwaway TracerProvider -- unlike the
+    decorator tests (test_retriever_traced.py etc.), which have to mock
+    the tracer because OTel's trace API only honors one
+    set_tracer_provider() call per process. That limitation is about
+    provider REGISTRATION; it has nothing to do with what this test
+    needs, which is just "some real span, currently active, anywhere" --
+    `local_provider.get_tracer(...)` builds a tracer bound directly to a
+    provider THIS test constructed, entirely bypassing the global
+    registry, so there's no conflict with whatever other tests already
+    claimed that global slot.
+    """
+    from opentelemetry.sdk.trace import TracerProvider
+
+    formatter = _JsonFormatter(environment="test")
+    local_tracer = TracerProvider().get_tracer("test")
+
+    with local_tracer.start_as_current_span("test-span") as span:
+        payload = json.loads(formatter.format(_make_record()))
+        expected_trace_id = format(span.get_span_context().trace_id, "032x")
+
+    assert payload["trace_id"] == expected_trace_id
+    # 32 lowercase hex digits -- the form Jaeger and friends search by,
+    # not Python's own default int/hex representation.
+    assert len(payload["trace_id"]) == 32
+    assert payload["trace_id"] == payload["trace_id"].lower()
+
+
+def test_format_trace_id_is_none_once_the_span_has_ended():
+    from opentelemetry.sdk.trace import TracerProvider
+
+    formatter = _JsonFormatter(environment="test")
+    local_tracer = TracerProvider().get_tracer("test")
+
+    with local_tracer.start_as_current_span("test-span"):
+        pass  # span is active only inside this block
+
+    payload = json.loads(formatter.format(_make_record()))
+
+    assert payload["trace_id"] is None

@@ -77,3 +77,40 @@ def test_retrieve_passes_query_and_k_through():
         query_texts=["some question"], n_results=2
     )
     assert result == []
+
+
+def test_retrieve_opens_a_dependency_span_with_collection_name_and_k():
+    """Phase 5: patching this module's own `_tracer` (a module-level
+    OTel handle, not injected -- see this file's Phase 5 comment) is the
+    same trick used for the chroma client/collection above, applied to
+    the tracer instead. Real OTel objects aren't needed to prove this
+    adapter names its span correctly and tags it with non-PII attributes.
+    """
+    fake_collection = MagicMock()
+    fake_collection.query.return_value = {
+        "documents": [[]],
+        "metadatas": [[]],
+        "distances": [[]],
+    }
+    fake_span_cm = MagicMock()
+    fake_span_cm.__exit__.return_value = False
+
+    with (
+        patch(
+            "itw_me.adapters.outbound.retriever_chroma.get_chroma_client",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "itw_me.adapters.outbound.retriever_chroma.get_collection",
+            return_value=fake_collection,
+        ),
+        patch("itw_me.adapters.outbound.retriever_chroma._tracer") as fake_tracer,
+    ):
+        fake_tracer.start_as_current_span.return_value = fake_span_cm
+        retriever = ChromaCorpusRetriever()
+        retriever.retrieve("some question", k=3)
+
+    fake_tracer.start_as_current_span.assert_called_once_with(
+        "chroma.query",
+        attributes={"chroma.collection_name": "itw_me_corpus", "chroma.n_results": 3},
+    )

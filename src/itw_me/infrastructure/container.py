@@ -15,11 +15,14 @@ from itw_me.adapters.outbound.repo_inmemory import InMemoryInterviewRepository
 from itw_me.adapters.outbound.retriever_canned import CannedCorpusRetriever
 from itw_me.adapters.outbound.retriever_chroma import ChromaCorpusRetriever
 from itw_me.adapters.outbound.retriever_measured import MeasuredCorpusRetriever
+from itw_me.adapters.outbound.retriever_traced import TracedCorpusRetriever
 from itw_me.adapters.outbound.generator_canned import CannedAnswerGenerator
 from itw_me.adapters.outbound.generator_measured import MeasuredAnswerGenerator
+from itw_me.adapters.outbound.generator_traced import TracedAnswerGenerator
 from itw_me.adapters.outbound.llm_openai import OpenAIAnswerGenerator
 from itw_me.infrastructure.logging import configure_logging
 from itw_me.infrastructure.telemetry import configure_metrics
+from itw_me.infrastructure.tracing import configure_tracing
 
 # Load a local .env file (if any) into os.environ before anything below
 # reads it. A no-op when no .env exists (e.g. in CI or a container that
@@ -57,6 +60,32 @@ configure_logging(environment=os.getenv("ITW_ME_ENV", "dev"))
 # nothing else uses.
 _instruments = configure_metrics()
 
+# Phase 5: same placement, same reason -- and see
+# infrastructure/tracing.py's docstring for why this one especially must
+# run exactly once, here, before anything calls trace.get_tracer(...):
+# the OTel trace API only honors the FIRST set_tracer_provider() call in
+# the whole process, unlike logging's root-logger handlers (which can be
+# reassigned repeatedly) or metrics' meter provider (whose instruments
+# proxy-upgrade regardless of call order).
+#
+# Read OTEL_EXPORTER_OTLP_TRACES_ENDPOINT here, not inside tracing.py,
+# for the same "env vars only at the composition root" reason as every
+# other configure_*() call in this file. Default is the OTel spec's own
+# convention for "an OTLP/HTTP collector on this same machine" -- exactly
+# right for `uvicorn` run directly against a standalone Jaeger container
+# (`docker run -p 4318:4318 -p 16686:16686 jaegertracing/all-in-one`).
+# Inside `docker compose up`, this app can't reach the jaeger CONTAINER
+# via "localhost" (that means "this container," not "the compose
+# network") -- docker-compose.yml's `app` service overrides this same
+# env var to `http://jaeger:4318/v1/traces`, Jaeger's service name being
+# the hostname Docker's internal DNS resolves for it. Same pattern
+# ITW_ME_LLM_BASE_URL already uses there for Ollama.
+configure_tracing(
+    otlp_traces_endpoint=os.getenv(
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://localhost:4318/v1/traces"
+    )
+)
+
 
 def build_interview_service() -> InterviewService:
     # Environment variables are read here and only here (never inside
@@ -93,7 +122,17 @@ def build_interview_service() -> InterviewService:
             api_key=os.getenv("OPENAI_API_KEY", "ollama"),
         )
 
-    # Phase 4: wrap BOTH ports in their OTel decorator, unconditionally --
+    # Phase 5: wrap BOTH ports in their tracing decorator FIRST -- i.e.
+    # innermost of everything that follows. A span's duration is just a
+    # timestamp pair; it costs nothing measurable for Measured*'s
+    # histograms to sit outside it, and putting tracing closest to the
+    # real vendor call means the "retrieve"/"generate" spans reflect the
+    # actual port call as purely as possible, before any other
+    # decorator's own bookkeeping has a chance to run inside them.
+    retriever = TracedCorpusRetriever(wrapped=retriever)
+    generator = TracedAnswerGenerator(wrapped=generator)
+
+    # Phase 4: wrap BOTH ports in their OTel metrics decorator next --
     # metrics apply the same way whether the underlying adapter is canned
     # or real, same as Phase 3's logging. This happens BEFORE the
     # Langfuse wrapping below, on purpose: see the comment there for why
@@ -115,17 +154,19 @@ def build_interview_service() -> InterviewService:
     # is never imported at all, so it stays a true no-op without the
     # optional dependency installed.
     #
-    # Wrapping order, now that there are two decorators around `generator`:
-    # MeasuredAnswerGenerator goes INNERMOST (built above, closer to the
-    # real vendor call) and LangfuseTracedAnswerGenerator OUTERMOST (built
-    # here, around the already-measured generator). That means
-    # itw_me_llm_latency_seconds times only the raw LLM call, never
-    # Langfuse's own bookkeeping overhead -- if the order were reversed,
-    # every request would look slightly slower to Prometheus the moment
-    # Langfuse tracing was turned on, for a reason that has nothing to do
-    # with the LLM itself. Phase 5 will add a third decorator (tracing
-    # spans) around this same generator; keep it in this same inside-out
-    # position, closest to the metrics layer, for the same reason.
+    # Wrapping order, now that there are THREE decorators around
+    # `generator`: TracedAnswerGenerator innermost, then
+    # MeasuredAnswerGenerator, then LangfuseTracedAnswerGenerator
+    # outermost (built here). That means itw_me_llm_latency_seconds times
+    # only the raw LLM call, never Langfuse's own bookkeeping overhead --
+    # if the order were reversed, every request would look slightly
+    # slower to Prometheus the moment Langfuse tracing was turned on, for
+    # a reason that has nothing to do with the LLM itself. The "generate"
+    # SPAN's duration is subject to the same reasoning, even though a
+    # span isn't a stored aggregate the way a histogram is: a trace
+    # showing "generate: 2.3s" should mean "the LLM call took 2.3s," not
+    # "the LLM call plus whatever Langfuse's SDK needed to do on this
+    # thread also took 2.3s."
     langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
     if langfuse_public_key and langfuse_secret_key:

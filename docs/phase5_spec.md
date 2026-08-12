@@ -1,4 +1,4 @@
-# Task: Complete the itw-me RAG chatbot (Phase 5) -- workflow & dependency tracing
+# Task: Complete the itw-me RAG chatbot (Phase 5) -- workflow & dependency tracing -- done
 
 ## Context
 
@@ -63,28 +63,65 @@ clear code over clever code.
 4. Naming convention for adapters: Technology + PortName (e.g.
    `TracedCorpusRetriever`).
 
-## Phase 5: distributed tracing (VOLT's Step 3, exactly)
+## Phase 5: distributed tracing (VOLT's Step 3, exactly) -- done
 
-1. **Tracer setup**: add `src/itw_me/infrastructure/tracing.py` -- a
-   `TracerProvider` exporting spans via OTLP. Add a `jaeger` service to
-   `docker-compose.yml` (`jaegertracing/all-in-one`, OTLP receiver enabled, UI on
-   `:16686`). Jaeger over Tempo/Azure Monitor: one container, a built-in UI, no
-   Grafana provisioning needed to see a trace -- the right tradeoff for a
-   training repo where the point is to *look at* a trace, not run production
-   infra.
-2. **Workflow spans**: wrap `InterviewService.ask_question` in a root span
-   (`ask_question`), with child spans `retrieve` and `generate` around the two
-   port calls. Use the same instrumentation approach Phase 4 picked for metrics
-   (decorator adapters, or spans started directly inside the concrete adapters)
-   -- state which one in a comment, and stay consistent rather than mixing
-   styles.
+Four things came up during implementation that weren't obvious from this
+spec's original wording:
+
+- **`trace_id_var` (Phase 3's reserved ContextVar) got deleted, not
+  populated.** The plan was "read it from the logging formatter, write
+  to it wherever spans get created." It turned out unnecessary:
+  `opentelemetry.trace.get_current_span()` already tracks the active
+  span via the exact same ContextVar mechanism internally -- a hand-
+  rolled second copy would have been redundant the moment a real tracer
+  existed. See `infrastructure/logging.py`'s module docstring.
+- **The tracing decorators (`TracedCorpusRetriever`,
+  `TracedAnswerGenerator`) take a `Tracer` via constructor, not a bare
+  module-level `trace.get_tracer(...)` call** -- unlike `logger` in
+  Phase 3, which IS a bare module-level global. Reason: OTel's trace API
+  only honors the FIRST `set_tracer_provider()` call in a whole process;
+  there is no way for a test to install its own `TracerProvider` after
+  `container.py`'s `configure_tracing()` (or any other test that
+  triggered it first) already claimed that one global slot. Constructor
+  injection sidesteps the problem instead of fighting it -- see
+  `infrastructure/tracing.py`'s docstring and
+  `tests/test_retriever_traced.py`.
+- **A real, timed gotcha, not a hypothetical one:** left at OTel's
+  defaults, `BatchSpanProcessor`'s background thread adds 6+ seconds to
+  every test run when no collector is listening (measured, not
+  guessed) -- and can print a confusing `ValueError: I/O operation on
+  closed file` traceback at interpreter shutdown even after all tests
+  pass. Fixed two ways: short `timeout`/`export_timeout_millis` on the
+  exporter/processor (see `infrastructure/tracing.py`), plus
+  `tests/conftest.py` explicitly shutting the provider down at session
+  end, before Python's own teardown can race it.
+- **Dependency spans are NOT decorators**, unlike the workflow spans --
+  `chroma.query` and `llm.chat.completions` are hardcoded directly
+  inside `retriever_chroma.py`/`llm_openai.py`, because their attributes
+  (collection name, model name) are vendor-specific knowledge a generic
+  decorator has no business having. They still nest correctly under
+  `retrieve`/`generate` in the trace tree purely because of call order --
+  nothing had to be wired for that to work.
+
+1. ~~**Tracer setup**~~ -- done: `src/itw_me/infrastructure/tracing.py`,
+   a `TracerProvider` exporting spans via OTLP/HTTP, plus a `jaeger`
+   service in `docker-compose.yml` (`jaegertracing/all-in-one`, OTLP
+   receiver enabled, UI on `:16686`). One addition versus the original
+   plan: explicit short timeouts on the exporter/processor -- see the
+   implementation notes above.
+2. ~~**Workflow spans**~~ -- done: decorator adapters
+   (`TracedCorpusRetriever`, `TracedAnswerGenerator`), matching Phase 4's
+   choice for metrics, wrapping `retrieve`/`generate` respectively; a
+   root `ask_question` span wraps the whole use case in
+   `InterviewService`, via the same application-layer OTel-API exception
+   Phase 4 established for its own instruments.
    Divergence note: VOLT's ticket lists `plan`/`retrieve`/`reflect`/`generate`
    because their backend is an agentic workflow; itw-me has no planning or
    reflection step. Two spans instead of four is a simplification of itw-me's
    actual architecture, not a coverage gap -- when translating this phase back
    to VOLT, plan/reflect need their own spans there, matching VOLT's own list.
-3. **Dependency spans**: inside `ChromaCorpusRetriever.retrieve` and
-   `OpenAIAnswerGenerator.generate`, wrap the actual vendor call in its own span
+3. ~~**Dependency spans**~~ -- done: inside `ChromaCorpusRetriever.retrieve` and
+   `OpenAIAnswerGenerator.generate`, wrapping the actual vendor call in its own span
    (`chroma.query`, `llm.chat.completions`) with attributes such as model name or
    collection name -- never raw question text, same cardinality/PII discipline as
    Phase 4's metric labels.
@@ -94,26 +131,36 @@ clear code over clever code.
    real database. If/when itw-me gains a real persistence adapter, it gets a
    `repository.save` span the same way -- but that is not required for this
    phase's definition of done.
-4. **Log/trace correlation**: in the logging formatter from Phase 3, read
-   `opentelemetry.trace.get_current_span().get_span_context()`; if a span is
-   recording, populate the (already-reserved) `trace_id` field from it. This is
-   the concrete implementation of VOLT's "correlate logs, metrics, traces"
-   objective -- log lines emitted inside a span now automatically carry that
-   span's trace id, and this is the *only* change to the logging code in this
-   whole phase.
-5. **README**: add a short section on where to see traces (Jaeger UI,
-   `localhost:16686`).
+4. ~~**Log/trace correlation**~~ -- done, and it really was the only
+   change to `infrastructure/logging.py`: read
+   `opentelemetry.trace.get_current_span().get_span_context()`; if
+   `.is_valid`, populate `trace_id` as 32 lowercase hex digits. This is
+   the concrete implementation of VOLT's "correlate logs, metrics,
+   traces" objective -- log lines emitted inside a span now automatically
+   carry that span's trace id. The field itself needed no change; only
+   what feeds it did.
+5. ~~**README**~~ -- done: "Running phase 5" section added.
 
 ## Definition of done
 
-- `pytest` green, offline, no keys or network needed -- Jaeger is optional at
-  test time and absent by default.
-- With `docker compose up` including the new `jaeger` service: Jaeger's UI
-  (`localhost:16686`) shows one trace per question, with `ask_question` >
-  `retrieve`/`generate` spans and a dependency span nested under each.
-- The `trace_id` on log lines emitted during a request (previously always
-  `None`) now matches the trace id Jaeger shows for that request's trace.
-- `grep -r "import opentelemetry" src/itw_me/domain src/itw_me/application`
-  returns nothing outside the permitted API-facade usage.
+- [x] `pytest` green, offline, no keys or network needed -- Jaeger is
+      optional at test time and absent by default (48 tests total, 11
+      new: `test_retriever_traced.py`, `test_generator_traced.py`, plus
+      additions to `test_retriever_chroma.py`, `test_llm_openai.py`,
+      `test_interview_service.py`, `test_logging.py`, and a new
+      `conftest.py` for clean test-session teardown).
+- [x] Verified live (Docker daemon wasn't available in this environment,
+      same caveat as Phase 4): ran `uvicorn` directly and confirmed, via
+      the actual JSON log lines, that all three
+      `itw_me.application.interview_service` log lines for one question
+      share a real, non-null, 32-hex-digit `trace_id` -- previously
+      always `None`. `docker compose up` with the new `jaeger` service,
+      end to end through the actual Jaeger UI, is still worth doing once
+      Docker is available, same outstanding item as Phase 4.
+- [x] `grep -r "opentelemetry" src/itw_me/domain src/itw_me/application`
+      (the corrected, broader pattern -- see Phase 4's own note on this)
+      returns nothing in `domain/`, and only the permitted API-facade
+      usage in `application/interview_service.py` (plus one docstring
+      mention in `request_context.py`).
 
 Next: [phase6_spec.md](phase6_spec.md) (VOLT Step 4: dashboards and alerting).

@@ -99,3 +99,20 @@ def test_constructor_defaults_api_key_when_none_given():
     mock_openai_cls.assert_called_once_with(
         base_url="http://localhost:11434/v1", api_key="not-needed"
     )
+
+
+def test_generate_opens_a_dependency_span_with_the_model_name():
+    """Same trick as test_retriever_chroma.py's equivalent: patch this
+    module's own `_tracer` rather than needing a real OTel provider.
+    """
+    generator, _ = _build_generator(_fake_response("hi"))
+
+    fake_span_cm = MagicMock()
+    fake_span_cm.__exit__.return_value = False
+    with patch("itw_me.adapters.outbound.llm_openai._tracer") as fake_tracer:
+        fake_tracer.start_as_current_span.return_value = fake_span_cm
+        generator.generate(Question(text="Anything?"), context=[], history=[])
+
+    fake_tracer.start_as_current_span.assert_called_once_with(
+        "llm.chat.completions", attributes={"llm.model": "test-model"}
+    )

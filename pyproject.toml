@@ -23,6 +23,9 @@ dependencies = [
     # transitively, via the exporter above) to render the exposition
     # format -- listed explicitly since it's a real, direct import.
     "prometheus-client",
+    # phase 5: OTLP/HTTP, matching Jaeger's receiver -- not the gRPC
+    # variant, to avoid an extra dependency (grpcio) for no benefit here.
+    "opentelemetry-exporter-otlp-proto-http",
 ]
 
 [project.optional-dependencies]

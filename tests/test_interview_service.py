@@ -191,3 +191,26 @@ def test_ask_question_records_end_to_end_latency():
     request_latency_seconds.record.assert_called_once()
     (elapsed,), _kwargs = request_latency_seconds.record.call_args
     assert elapsed >= 0
+
+
+def test_ask_question_opens_a_root_span_named_ask_question():
+    # Same reasoning as tests/test_retriever_traced.py: a MagicMock
+    # tracer, not a real OTel one, sidesteps the "only the first
+    # set_tracer_provider() call in the process counts" limitation
+    # entirely -- see infrastructure/tracing.py's docstring.
+    fake_span_cm = MagicMock()
+    fake_span_cm.__exit__.return_value = False  # never suppress exceptions
+    fake_tracer = MagicMock()
+    fake_tracer.start_as_current_span.return_value = fake_span_cm
+
+    service = InterviewService(
+        retriever=FakeRetriever(),
+        generator=FakeGenerator(),
+        repository=InMemoryInterviewRepository(),
+        tracer=fake_tracer,
+    )
+    interview = service.start_interview()
+
+    service.ask_question(interview.id, "Where do you work?")
+
+    fake_tracer.start_as_current_span.assert_called_once_with("ask_question")

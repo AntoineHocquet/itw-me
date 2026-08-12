@@ -10,9 +10,16 @@ change instead of a code change.
 
 Every openai import stays in this file. If it leaks into domain/ or
 application/, the hexagon is broken.
+
+Phase 5 note: same reasoning as retriever_chroma.py's "chroma.query"
+span -- this file's "llm.chat.completions" span is vendor-specific
+(tagged with the model name), so it lives directly in this concrete
+adapter rather than in the generic TracedAnswerGenerator decorator. It
+nests inside "generate" automatically, for the same call-order reason.
 """
 
 from openai import OpenAI
+from opentelemetry import trace
 
 from itw_me.domain.models import Answer, Citation, Question, RetrievedChunk
 from itw_me.domain.ports import AnswerGenerator
@@ -24,6 +31,8 @@ _SYSTEM_PROMPT = (
     "that you don't know or that it isn't covered in your notes -- never "
     "invent facts about yourself."
 )
+
+_tracer = trace.get_tracer("itw_me")
 
 
 class OpenAIAnswerGenerator(AnswerGenerator):
@@ -59,10 +68,16 @@ class OpenAIAnswerGenerator(AnswerGenerator):
                 )
         messages.append({"role": "user", "content": question.text})
 
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,
-        )
+        # Attribute is the model name only -- never `messages`, which
+        # contains this visitor's actual question and every prior turn's
+        # text. Same discipline as retriever_chroma.py's span.
+        with _tracer.start_as_current_span(
+            "llm.chat.completions", attributes={"llm.model": self._model}
+        ):
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,
+            )
 
         # Citations reflect exactly the chunks placed in the prompt above
         # (i.e. all of `context`) -- if retrieval returned nothing, there

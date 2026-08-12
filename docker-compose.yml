@@ -1,4 +1,4 @@
-# Phase 3/4: the observability stack. This one file is worth studying:
+# Phase 3/4/5: the observability stack. This one file is worth studying:
 # it is a miniature of what an infra team deploys in Kubernetes.
 
 services:
@@ -21,6 +21,29 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-}
+      # "localhost" inside THIS container means "this container," not
+      # "the compose network" -- so the bare-host default in container.py
+      # (correct for `uvicorn` run directly against a standalone Jaeger)
+      # has to be overridden here to Jaeger's compose SERVICE name, which
+      # Docker's internal DNS resolves within this network. Same pattern
+      # as ITW_ME_LLM_BASE_URL above, for the same reason.
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://jaeger:4318/v1/traces}
+    depends_on:
+      - jaeger   # so the app's very first span export attempt, right
+                 # after startup, has somewhere to go rather than a few
+                 # seconds of expected connection-refused.
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      # Explicit rather than relying on the image's own default: Jaeger
+      # has supported OTLP natively since well before this default
+      # became implicit in newer image versions, and being explicit here
+      # means this file keeps working even against an older pinned image.
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "4318:4318"    # OTLP/HTTP receiver -- what this app's exporter sends to
+      - "16686:16686"  # Jaeger UI: http://localhost:16686
 
   prometheus:
     image: prom/prometheus:latest

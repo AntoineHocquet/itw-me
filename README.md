@@ -81,10 +81,10 @@ Phase 4 (OpenTelemetry metrics + Prometheus endpoint):
       something to scrape
 
 Phase 5 (distributed tracing):
-- [ ] OTel spans for retrieve/generate, and for the vendor calls behind
+- [x] OTel spans for retrieve/generate, and for the vendor calls behind
       them (Chroma, the LLM)
-- [ ] Jaeger, so those spans are visible somewhere
-- [ ] `trace_id` (reserved above, in Phase 3) populated for real
+- [x] Jaeger, so those spans are visible somewhere
+- [x] `trace_id` (reserved above, in Phase 3) populated for real
 
 Phase 6 (dashboards & alerting):
 - [ ] Grafana dashboard, provisioned rather than clicked through
@@ -168,6 +168,39 @@ Then open `http://localhost:9090`, and query `itw_me_questions_total` --
 Prometheus's own UI plots it. `http://localhost:3000` (Grafana,
 admin/admin) is running too, but has nothing provisioned on it yet --
 that's Phase 6.
+
+## Running phase 5 (distributed tracing)
+
+Without Docker, the app still opens real spans -- there's just nowhere
+for them to land, so a scraper being unreachable is expected and
+harmless (see infrastructure/tracing.py's docstring):
+
+```bash
+uvicorn itw_me.adapters.inbound.api:app
+curl -s -X POST http://localhost:8000/interviews
+curl -s -X POST http://localhost:8000/interviews/<id>/questions \
+  -H 'Content-Type: application/json' -d '{"text": "Where do you work?"}'
+```
+
+The `trace_id` on the three log lines from "Running phase 3" above is no
+longer `null` -- it's now a real 32-character hex id, the same one on
+all three lines for one question, because they all ran inside the same
+span tree.
+
+With Docker, that id becomes something you can actually click through:
+
+```bash
+docker compose up --build
+# then, in another terminal, same two curls as above
+```
+
+Open `http://localhost:16686` (Jaeger), find the `itw-me` service, and
+open the most recent trace: `ask_question` (root) contains `retrieve`
+and `generate` (one span each per question), and each of those contains
+one more span for the actual vendor call (`chroma.query`,
+`llm.chat.completions`) -- four spans total per question, nested exactly
+the way the code calls them, no manual wiring required to get that
+nesting right.
 
 ## Optional: Langfuse tracing
 
