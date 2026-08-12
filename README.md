@@ -59,12 +59,36 @@ Phase 2 (real RAG):
 - [x] ChromaCorpusRetriever, OpenAIAnswerGenerator
 - [x] Citations returned by the API
 
-Phase 3 (observability):
+Observability is split into four phases -- docs/phase3_spec.md through
+docs/phase6_spec.md -- deliberately mapped 1:1 onto the four steps of a
+real observability rollout ticket for a different, professional project
+(see any of those docs' Context section for why that split matters).
+
+Phase 3 (structured logging & correlation IDs):
+- [x] `infrastructure/logging.py`: one JSON object per log line, on stdout
+- [x] `X-Correlation-Id` middleware: reused from the caller, or minted,
+      always echoed back on the response
+- [x] `interaction_id`: one per interview turn (`Exchange.id`), bound
+      while retrieving/generating/recording so those log lines can be
+      grep'd/filtered down to a single turn
+- [x] `trace_id`: reserved in every log line, always `null` until Phase 5
+
+Phase 4 (OpenTelemetry metrics + Prometheus endpoint):
 - [ ] OTel instrumentation: counter for questions, histograms for
       end-to-end / retrieval / LLM latency, token counters
 - [ ] /metrics endpoint via the Prometheus exporter
-- [ ] docker-compose up: watch Prometheus scrape, build one Grafana
-      dashboard (request rate, p95 latency, tokens per answer)
+- [ ] Dockerfile + docker-compose `app` service so Prometheus has
+      something to scrape
+
+Phase 5 (distributed tracing):
+- [ ] OTel spans for retrieve/generate, and for the vendor calls behind
+      them (Chroma, the LLM)
+- [ ] Jaeger, so those spans are visible somewhere
+- [ ] `trace_id` (reserved above, in Phase 3) populated for real
+
+Phase 6 (dashboards & alerting):
+- [ ] Grafana dashboard, provisioned rather than clicked through
+- [ ] one alert rule, provisioned the same way
 
 ## Running phase 2 (real RAG)
 
@@ -83,6 +107,31 @@ first. To use the real OpenAI API instead, set `ITW_ME_LLM_BASE_URL`,
 `ITW_ME_MODEL`, and `OPENAI_API_KEY` (see .env.example). Retrieval
 (ChromaCorpusRetriever) is always real and needs no key either way --
 embeddings run locally via Chroma's built-in model.
+
+## Running phase 3 (structured logging & correlation IDs)
+
+No new setup versus Phase 1/2 -- run the app exactly as above (canned or
+real RAG, doesn't matter) and watch stdout:
+
+```bash
+uvicorn itw_me.adapters.inbound.api:app
+```
+
+```bash
+curl -s -X POST http://localhost:8000/interviews          # note the interview_id
+curl -si -X POST http://localhost:8000/interviews/<id>/questions \
+  -H 'Content-Type: application/json' -d '{"text": "Where do you work?"}'
+```
+
+Every line on stdout, including uvicorn's own startup/access lines, is
+now one JSON object -- pipe through `| jq .` for a readable view. The
+response has an `X-Correlation-Id` header; pass your own
+(`-H 'X-Correlation-Id: demo-1'`) and it comes straight back instead of
+a generated one. The three `itw_me.application.interview_service` log
+lines per question (`retrieving corpus chunks` / `generating answer` /
+`recorded answer`) share that request's `correlation_id` and carry a
+per-turn `interaction_id`; `trace_id` is present but always `null` until
+Phase 5.
 
 ## Optional: Langfuse tracing
 

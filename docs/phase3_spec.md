@@ -1,4 +1,4 @@
-# Task: Complete the itw-me RAG chatbot (Phase 3) -- logging & correlation foundation
+# Task: Complete the itw-me RAG chatbot (Phase 3) -- logging & correlation foundation -- done
 
 ## Context
 
@@ -19,6 +19,11 @@ checklist rather than an approximation. Metrics are [phase4_spec.md](phase4_spec
 dashboards/alerting are [phase6_spec.md](phase6_spec.md) (VOLT Step 4). Langfuse is
 intentionally not part of this sequence at all -- see
 [langfuse_spec.md](langfuse_spec.md) for why.
+
+This is a build spec, for whoever implements this phase in itw-me's own code.
+For the plain-language write-up of *why this technique matters*, meant for
+discussing with the VOLT team rather than for implementing here, see
+[volt.md](volt.md)'s Phase 3 section.
 
 This is also a training codebase. Code quality, comments explaining non-obvious
 decisions, and architectural discipline matter more than feature count. Prefer
@@ -58,12 +63,27 @@ clear code over clever code.
 4. Naming convention for adapters: Technology + PortName (not exercised by this
    phase specifically, but keep in mind for later phases).
 
-## Phase 3: structured logging & correlation IDs (VOLT's Step 1, exactly)
+## Phase 3: structured logging & correlation IDs (VOLT's Step 1, exactly) -- done
 
 VOLT's Step 1 is three bullets: standardize structured logging, introduce
 correlation IDs, align logging conventions. Here is each, translated to itw-me:
 
-1. **Structured JSON logging**: create `src/itw_me/infrastructure/logging.py`
+One design decision that came up during implementation and isn't obvious
+from this spec's original wording: this phase's `ContextVar`s
+(correlation_id, interaction_id, trace_id) ended up in a *new* module,
+`src/itw_me/application/request_context.py`, not inside
+`infrastructure/logging.py` as "correlation ID propagation... a ContextVar"
+might suggest at first read. Reason: `InterviewService.ask_question`
+(application/) needs to *set* interaction_id mid-method, and
+application/ is only allowed to import domain + stdlib -- it can never
+import from infrastructure/. `contextvars` is stdlib, so a module with
+nothing but ContextVar declarations is legal inside application/ itself;
+putting it in infrastructure/ instead would have made that `.set()` call
+impossible without breaking the inward-dependency rule. See
+request_context.py's own docstring for the full reasoning -- it's the
+single most important "why is this file even here" in this phase.
+
+1. ~~**Structured JSON logging**~~ -- done: create `src/itw_me/infrastructure/logging.py`
    with a `configure_logging()` function -- stdlib `logging` plus a small custom
    `Formatter` subclass that emits one JSON object per line. Fields, adapted from
    VOLT's logging standard:
@@ -79,32 +99,51 @@ correlation IDs, align logging conventions. Here is each, translated to itw-me:
      uvicorn, so there is no meaningful thread model to report -- this field is
      deliberately dropped, not silently renamed to something misleading.
    Call `configure_logging()` once, at the top of `container.py`.
-2. **Correlation ID propagation**: a small ASGI middleware in `api.py` that reads
-   the incoming `X-Correlation-Id` header, or generates a `uuid4` if absent, sets
-   it on a `ContextVar` for the duration of the request, and echoes it back on the
-   response. Every log line emitted while handling that request picks it up
-   automatically via the formatter in step 1.
-3. **Interaction id ("align logging conventions" -- one durable id per turn, not
-   just per request)**: add `id: str = field(default_factory=lambda:
-   str(uuid.uuid4()))` to `Exchange` in `domain/models.py` -- a per-turn identity
-   is a legitimate domain fact (same justification as the existing token-count
-   fields on `Answer`), not an observability bolt-on. In
-   `InterviewService.ask_question`, set the `interaction_id` contextvar to the
-   new exchange's id right after `interview.ask(...)` returns, so retrieve/
-   generate/record logs for that turn are all tagged with it.
-4. **README**: add a short section on the request lifecycle -- correlation id
-   in/out via headers, where JSON logs land (stdout).
+   Extra, not originally spelled out above but added during implementation:
+   the formatter also folds any `extra={...}` a call site attaches (stdlib
+   logging's own mechanism) straight into the JSON payload -- see the
+   `retrieving corpus chunks` / `generating answer` / `recorded answer`
+   log lines added to `interview_service.py` for step 3 below, each with
+   their own `extra=`. Also folded in: routing uvicorn's own
+   `uvicorn`/`uvicorn.error`/`uvicorn.access` loggers through the same
+   formatter -- by default they have `propagate=False` and their own
+   handlers, so without this, uvicorn's classic plain-text access log
+   line would keep printing right alongside our JSON, which would have
+   made "every log line is JSON" not actually true.
+2. ~~**Correlation ID propagation**~~ -- done: a small ASGI middleware in
+   `api.py` that reads the incoming `X-Correlation-Id` header, or generates a
+   `uuid4` if absent, sets it on a `ContextVar` for the duration of the request,
+   and echoes it back on the response. Every log line emitted while handling
+   that request picks it up automatically via the formatter in step 1.
+3. ~~**Interaction id**~~ ("align logging conventions" -- one durable id per
+   turn, not just per request) -- done: added `id: str =
+   field(default_factory=lambda: str(uuid.uuid4()))` to `Exchange` in
+   `domain/models.py` -- a per-turn identity is a legitimate domain fact (same
+   justification as the existing token-count fields on `Answer`), not an
+   observability bolt-on. `InterviewService.ask_question` sets the
+   `interaction_id` contextvar to the new exchange's id right after
+   `interview.ask(...)` returns, wraps the retrieve/generate/record/save
+   calls in a `try/finally` so the binding is always undone, and logs one
+   line at each of those three steps so there's something to actually see
+   the id attached to.
+4. ~~**README**~~ -- done: "Running phase 3" section added, plus the Build
+   order checklist split to match phases 3-6.
 
 ## Definition of done
 
-- `pytest` green, offline, no keys or containers needed.
-- Every log line emitted while handling one HTTP request is single-line JSON
-  and shares one `correlation_id`; the exchange's `interaction_id` appears on
-  the retrieve/generate/record log lines for that turn; `trace_id` is present
-  in the schema and always `None` (Phase 5 populates it).
-- `grep -r "import chromadb\|import openai" src/itw_me/domain
-  src/itw_me/application` still returns nothing -- this phase touches no vendor
-  boundary at all.
+- [x] `pytest` green, offline, no keys or containers needed (26 tests total,
+      9 new: `tests/test_logging.py`, `tests/test_api.py`, plus two added to
+      `tests/test_interview_service.py`).
+- [x] Every log line emitted while handling one HTTP request is single-line
+      JSON and shares one `correlation_id`; the exchange's `interaction_id`
+      appears on the retrieve/generate/record log lines for that turn;
+      `trace_id` is present in the schema and always `None` (Phase 5
+      populates it). Verified by actually running `uvicorn` and `curl`-ing
+      both endpoints -- see the transcript in this phase's implementation
+      notes/commit for the real log lines produced.
+- [x] `grep -r "import chromadb\|import openai" src/itw_me/domain
+      src/itw_me/application` still returns nothing -- this phase touches no
+      vendor boundary at all.
 
 Next: [phase4_spec.md](phase4_spec.md) (VOLT Step 2: OpenTelemetry instrumentation
 and core metrics).

@@ -53,9 +53,28 @@ class RetrievedChunk:
 
 @dataclass
 class Exchange:
-    """One Q&A turn inside an interview."""
+    """One Q&A turn inside an interview.
+
+    `id` is a per-turn identity, added in Phase 3 (see
+    docs/phase3_spec.md) so a single turn can be pinpointed independently
+    of its position in Interview.exchanges. This is a legitimate domain
+    fact -- the same justification already used for Answer's token
+    counts above -- NOT an observability bolt-on: "this specific
+    question-and-answer exchange has an identity" is true regardless of
+    whether anything logs it. What application/interview_service.py does
+    with that id (binding it into request-scoped logging context) is an
+    application-layer concern; the domain only guarantees the id exists
+    and is stable for the lifetime of the Exchange.
+
+    field(default_factory=...), not a plain default: dataclasses
+    evaluate a plain default ONCE, at class-definition time, and every
+    instance would then share that single object. default_factory calls
+    uuid.uuid4() fresh for every new Exchange -- the same pattern
+    Interview.id below already uses, for the same reason.
+    """
     question: Question
     answer: Answer | None = None
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
 @dataclass

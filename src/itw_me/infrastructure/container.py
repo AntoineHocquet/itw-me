@@ -16,12 +16,31 @@ from itw_me.adapters.outbound.retriever_canned import CannedCorpusRetriever
 from itw_me.adapters.outbound.retriever_chroma import ChromaCorpusRetriever
 from itw_me.adapters.outbound.generator_canned import CannedAnswerGenerator
 from itw_me.adapters.outbound.llm_openai import OpenAIAnswerGenerator
+from itw_me.infrastructure.logging import configure_logging
 
 # Load a local .env file (if any) into os.environ before anything below
 # reads it. A no-op when no .env exists (e.g. in CI or a container that
 # sets real environment variables directly) -- this is purely a local-dev
 # convenience, never a required step.
 load_dotenv()
+
+# Phase 3: configure structured JSON logging once, at import time of the
+# composition root -- the same "do it once, here, not scattered
+# elsewhere" reasoning as load_dotenv() above. This has to run AFTER
+# load_dotenv() (so a local .env's ITW_ME_ENV is visible) and BEFORE
+# build_interview_service() is ever called (so nothing logs before the
+# formatter is installed). Module-level placement guarantees both: this
+# file's top-level statements only run once, the first time anything
+# imports itw_me.infrastructure.container, and Python runs them in the
+# order they're written.
+#
+# Reading ITW_ME_ENV here, not inside infrastructure/logging.py, is
+# deliberate: this file is THE composition root, the one place this
+# codebase's architectural rules say environment variables get read (see
+# docs/phase3_spec.md, rule 2) -- configure_logging() itself only
+# accepts an already-resolved `environment` string, which is also what
+# keeps it trivially unit-testable (see tests/test_logging.py).
+configure_logging(environment=os.getenv("ITW_ME_ENV", "dev"))
 
 
 def build_interview_service() -> InterviewService:

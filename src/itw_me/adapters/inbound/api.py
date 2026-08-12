@@ -5,9 +5,12 @@ No business logic in this file, ever. If an endpoint function grows
 beyond ~10 lines, something is leaking in.
 """
 
-from fastapi import FastAPI, HTTPException
+import uuid
+
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
+from itw_me.application.request_context import correlation_id_var
 from itw_me.infrastructure.container import build_interview_service
 
 app = FastAPI(title="itw-me")
@@ -15,6 +18,47 @@ app = FastAPI(title="itw-me")
 # Wired once at startup: the composition root decides which adapters
 # this service gets. The API doesn't know and doesn't care.
 service = build_interview_service()
+
+
+@app.middleware("http")
+async def correlation_id_middleware(request: Request, call_next):
+    """Phase 3, VOLT Step 1's "introduce correlation IDs": every request
+    gets a correlation_id, reused across service boundaries if the
+    caller already has one, minted fresh otherwise -- then echoed back
+    on the response so the caller (a browser, a load test, another
+    service) can quote it back to you when reporting a problem.
+
+    WHY THIS WORKS WITHOUT PASSING correlation_id THROUGH EVERY
+    FUNCTION SIGNATURE
+    -------------------------------------------------------------
+    `@app.middleware("http")` wraps the ENTIRE rest of the request --
+    everything `call_next(request)` runs, including InterviewService and
+    every adapter it calls, executes as normal Python function calls
+    nested inside this `try` block, all within the same asyncio Task.
+    `correlation_id_var.set(...)` therefore stays visible for the whole
+    request without itw-me's application/domain code needing to know
+    this middleware -- or even HTTP -- exists. That is the same trick
+    interaction_id_var uses one layer down, in
+    application/interview_service.py.
+
+    Why reset() in a `finally`, not just letting the variable "expire":
+    Starlette happens to give each request its own Task already, so in
+    practice nothing would leak even without this. But relying on that
+    implementation detail, rather than being explicit, is exactly the
+    kind of thing that quietly breaks when a framework internal changes
+    -- resetting explicitly costs nothing and removes the dependency.
+    """
+    incoming_correlation_id = request.headers.get("X-Correlation-Id")
+    correlation_id = incoming_correlation_id or str(uuid.uuid4())
+
+    token = correlation_id_var.set(correlation_id)
+    try:
+        response = await call_next(request)
+    finally:
+        correlation_id_var.reset(token)
+
+    response.headers["X-Correlation-Id"] = correlation_id
+    return response
 
 
 class AskRequest(BaseModel):
