@@ -1,4 +1,4 @@
-# Task: Complete the itw-me RAG chatbot (Phase 4) -- OTel metrics & Prometheus endpoint
+# Task: Complete the itw-me RAG chatbot (Phase 4) -- OTel metrics & Prometheus endpoint -- done
 
 ## Context
 
@@ -60,9 +60,47 @@ clear code over clever code.
 4. Naming convention for adapters: Technology + PortName
    (e.g. ChromaCorpusRetriever, MeasuredCorpusRetriever).
 
-## Phase 4: OpenTelemetry metrics + Prometheus endpoint (VOLT's Step 2, exactly)
+## Phase 4: OpenTelemetry metrics + Prometheus endpoint (VOLT's Step 2, exactly) -- done
 
-1. **Instrumentation module**: create
+Three things came up during implementation that weren't obvious from this
+spec's original wording:
+
+- **All six instruments ended up defined in `telemetry.py` after all**,
+  not four-there-plus-two-in-`InterviewService` as a first draft of this
+  note said. `InterviewService.__init__` still can't import
+  `infrastructure/telemetry.py` (the inward-dependency rule), so it
+  re-creates its own two (`itw_me_questions_total`,
+  `itw_me_request_latency_seconds`) via the bare OTel API as a fallback
+  -- but `container.py` now always passes in the real ones from
+  `telemetry.py`'s `Instruments`, so that fallback only ever fires in
+  tests that construct `InterviewService` standalone. Net effect: one
+  canonical definition per instrument name, `container.py` wires all six
+  explicitly (matching how it already wires the retriever/generator/
+  repository), and the fallback is a documented, deliberate duplication,
+  not a second source of truth.
+- **OTel's default histogram bucket boundaries are wrong for this
+  codebase's units.** They're shaped for milliseconds (`0, 5, 10, 25,
+  50, ... 10000`); every instrument here is named `*_seconds`. Caught by
+  actually running the app and reading `/metrics` -- every latency
+  landed in the first bucket. Fixed via
+  `explicit_bucket_boundaries_advisory` on each histogram. See
+  `telemetry.py`'s `_LATENCY_BUCKET_BOUNDARIES_SECONDS`.
+- **Decorator order, now that two wrap `AnswerGenerator`:**
+  `MeasuredAnswerGenerator` goes innermost (closest to the real vendor
+  call), `LangfuseTracedAnswerGenerator` outermost -- so
+  `itw_me_llm_latency_seconds` times only the actual LLM call, never
+  Langfuse's own overhead. See `container.py`'s comment at that wrapping
+  point. Phase 5's tracing decorator should follow the same rule.
+- The spec's own DoD grep pattern, `grep -r "import opentelemetry"`, only
+  matches `import opentelemetry` statements -- this codebase's actual
+  style is `from opentelemetry import metrics`, which that pattern
+  doesn't match at all. `grep -r "opentelemetry" src/itw_me/domain
+  src/itw_me/application` is the check that actually verifies anything;
+  run that way, it confirms every reference is inside
+  `interview_service.py`'s permitted API-facade usage, and `domain/` has
+  none at all.
+
+1. ~~**Instrumentation module**~~ -- done: create
    `src/itw_me/infrastructure/telemetry.py` that sets up the OTel MeterProvider
    with a Prometheus exporter and defines these instruments:
    - `itw_me_questions_total` (counter, label: status = ok|error)
@@ -73,33 +111,39 @@ clear code over clever code.
      (counters)
    Cardinality rule: label values must come from small fixed sets. Never use
    interview_id, question text, or any unbounded value as a label.
-2. **Where to measure**: timing of retrieve and generate happens around the
-   port calls. Preferred design to keep vendor code out of the application
-   layer: implement decorator adapters (e.g. MeasuredCorpusRetriever wrapping
-   any CorpusRetriever) composed in the container, OR instrument inside the
-   concrete adapters. Exception allowed if you choose otherwise: the
-   application layer may import the opentelemetry API (it is designed as a
-   vendor-neutral facade), but nothing else. Pick one approach and state it in
-   a comment -- Phase 5 (tracing) will reuse the same choice for spans, so
-   staying consistent here saves a decision later.
-3. **Expose /metrics**: mount the Prometheus ASGI/WSGI app or endpoint in
-   api.py so GET /metrics returns the text exposition format.
-4. *(itw-me-only plumbing, no VOLT equivalent)* **Dockerfile** for the app:
-   python slim base, install project, run uvicorn on 0.0.0.0:8000.
-5. *(itw-me-only plumbing, no VOLT equivalent)* **docker-compose.yml**: add the
-   `app` service (build: ., ports 8000:8000, env vars passed through).
-   Prometheus target `app:8000` already exists.
-6. Update README build-order checkboxes and add a short "Running the stack"
-   section: ingest, docker compose up, where to see raw metrics on
-   `localhost:9090`.
+2. ~~**Where to measure**~~ -- done: decorator adapters
+   (`MeasuredCorpusRetriever`, `MeasuredAnswerGenerator` in
+   `adapters/outbound/`), composed in `container.py`, wrapping any
+   `CorpusRetriever`/`AnswerGenerator` -- Chroma or canned, doesn't matter.
+   `InterviewService`'s own two instruments (see the notes above) use the
+   explicitly permitted application-layer exception instead, since they
+   time the whole use case, not one port call.
+3. ~~**Expose /metrics**~~ -- done: `GET /metrics` in `api.py` calls
+   `prometheus_client.generate_latest(REGISTRY)` directly -- no ASGI/WSGI
+   bridging needed, since the exposition format is just text this route
+   returns like any other response.
+4. ~~*(itw-me-only plumbing, no VOLT equivalent)* **Dockerfile**~~ -- done.
+5. ~~*(itw-me-only plumbing, no VOLT equivalent)* **docker-compose.yml**~~
+   -- done: `app` service added, `prometheus` now `depends_on: [app]`.
+6. ~~Update README~~ -- done: build-order checkboxes updated, "Running
+   phase 4" section added.
 
 ## Definition of done
 
-- `pytest` green, offline, no keys needed.
-- With ITW_ME_FAKE_LLM=1: `docker compose up`, POST a question, watch
-  `itw_me_questions_total` increase on `http://localhost:9090`.
-- `grep -r "import opentelemetry" src/itw_me/domain src/itw_me/application`
-  returns nothing outside the permitted API-facade usage.
+- [x] `pytest` green, offline, no keys needed (37 tests total, 11 new).
+- [x] With ITW_ME_FAKE_LLM=1: ran `uvicorn` directly (Docker daemon wasn't
+      available in the environment this was built in) and POSTed two
+      questions; `curl localhost:8000/metrics` showed all six instruments
+      with real values (`itw_me_questions_total{status="ok"} 2.0`, etc.).
+      `docker compose up` itself was verified indirectly: `pip install .`
+      (non-editable, matching the Dockerfile's own install step) into a
+      throwaway venv succeeded and the app imported and started cleanly.
+      Actually running `docker compose up` end-to-end is still worth doing
+      once Docker is available, as a final check.
+- [x] `grep -r "opentelemetry" src/itw_me/domain src/itw_me/application`
+      (broader than this line originally specified -- see the note above)
+      returns nothing in `domain/`, and only the permitted API-facade
+      usage in `application/interview_service.py`.
 
 Next: [phase5_spec.md](phase5_spec.md) (VOLT Step 3: workflow and dependency
 tracing).

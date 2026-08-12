@@ -14,9 +14,12 @@ from itw_me.domain.ports import AnswerGenerator, CorpusRetriever
 from itw_me.adapters.outbound.repo_inmemory import InMemoryInterviewRepository
 from itw_me.adapters.outbound.retriever_canned import CannedCorpusRetriever
 from itw_me.adapters.outbound.retriever_chroma import ChromaCorpusRetriever
+from itw_me.adapters.outbound.retriever_measured import MeasuredCorpusRetriever
 from itw_me.adapters.outbound.generator_canned import CannedAnswerGenerator
+from itw_me.adapters.outbound.generator_measured import MeasuredAnswerGenerator
 from itw_me.adapters.outbound.llm_openai import OpenAIAnswerGenerator
 from itw_me.infrastructure.logging import configure_logging
+from itw_me.infrastructure.telemetry import configure_metrics
 
 # Load a local .env file (if any) into os.environ before anything below
 # reads it. A no-op when no .env exists (e.g. in CI or a container that
@@ -41,6 +44,18 @@ load_dotenv()
 # accepts an already-resolved `environment` string, which is also what
 # keeps it trivially unit-testable (see tests/test_logging.py).
 configure_logging(environment=os.getenv("ITW_ME_ENV", "dev"))
+
+# Phase 4: same "once, here, before anything else" placement as
+# configure_logging() just above -- and for the same reason. This MUST
+# run before build_interview_service() constructs an InterviewService,
+# so its two self-created instruments (see interview_service.py) bind to
+# the real Prometheus-backed MeterProvider from the very first call,
+# never to the no-op fallback tests rely on. `_instruments` is module
+# state, not a parameter threaded through every function below, purely
+# because build_interview_service() is the only function that needs it
+# and it's simpler to close over it than to pass it as an argument
+# nothing else uses.
+_instruments = configure_metrics()
 
 
 def build_interview_service() -> InterviewService:
@@ -78,11 +93,39 @@ def build_interview_service() -> InterviewService:
             api_key=os.getenv("OPENAI_API_KEY", "ollama"),
         )
 
+    # Phase 4: wrap BOTH ports in their OTel decorator, unconditionally --
+    # metrics apply the same way whether the underlying adapter is canned
+    # or real, same as Phase 3's logging. This happens BEFORE the
+    # Langfuse wrapping below, on purpose: see the comment there for why
+    # wrapping order matters once more than one decorator stacks up.
+    retriever = MeasuredCorpusRetriever(
+        wrapped=retriever,
+        retrieval_latency_seconds=_instruments.retrieval_latency_seconds,
+    )
+    generator = MeasuredAnswerGenerator(
+        wrapped=generator,
+        llm_latency_seconds=_instruments.llm_latency_seconds,
+        llm_input_tokens_total=_instruments.llm_input_tokens_total,
+        llm_output_tokens_total=_instruments.llm_output_tokens_total,
+    )
+
     # Optional Langfuse tracing (see docs/langfuse_spec.md): wraps whichever
     # generator was chosen above. Only imported here, inside the branch that
     # actually needs it -- with the env vars unset (the default), `langfuse`
     # is never imported at all, so it stays a true no-op without the
     # optional dependency installed.
+    #
+    # Wrapping order, now that there are two decorators around `generator`:
+    # MeasuredAnswerGenerator goes INNERMOST (built above, closer to the
+    # real vendor call) and LangfuseTracedAnswerGenerator OUTERMOST (built
+    # here, around the already-measured generator). That means
+    # itw_me_llm_latency_seconds times only the raw LLM call, never
+    # Langfuse's own bookkeeping overhead -- if the order were reversed,
+    # every request would look slightly slower to Prometheus the moment
+    # Langfuse tracing was turned on, for a reason that has nothing to do
+    # with the LLM itself. Phase 5 will add a third decorator (tracing
+    # spans) around this same generator; keep it in this same inside-out
+    # position, closest to the metrics layer, for the same reason.
     langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
     if langfuse_public_key and langfuse_secret_key:
@@ -102,4 +145,6 @@ def build_interview_service() -> InterviewService:
         retriever=retriever,
         generator=generator,
         repository=InMemoryInterviewRepository(),
+        questions_total=_instruments.questions_total,
+        request_latency_seconds=_instruments.request_latency_seconds,
     )

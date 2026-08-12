@@ -284,7 +284,127 @@ already true about VOLT's stack:
 
 ## Phase 4 (VOLT's Step 2): OpenTelemetry metrics + Prometheus
 
-*Not written yet -- add once [phase4_spec.md](phase4_spec.md) is built.*
+### The problem, concretely
+
+Phase 3's logs answer "what happened on *this one* request" -- they are
+the right tool once you already know which request you care about.
+They do not answer "is the service healthy *right now*," or "did p95
+latency just get worse after that last deploy." Answering those needs
+numbers aggregated across every request, continuously, not text you'd
+have to grep and hand-count. That's what metrics are: a small, fixed set
+of counters and histograms -- cheap to store, cheap to query, cheap to
+put on a dashboard -- that answer "how many," "how fast," "how often
+does it fail" at a glance, without caring which individual request
+produced any of it.
+
+### Two ideas worth separating
+
+**1. Metrics are usually pulled, not pushed.** The app never sends a
+single byte to Prometheus. It just keeps a handful of numbers updated in
+memory and exposes them, as plain text, on one HTTP endpoint
+(`/metrics`). Prometheus is the one that reaches out, on its own
+schedule, and reads that endpoint. This inversion matters operationally:
+the app doesn't need to know Prometheus's address, doesn't retry on
+network failure, doesn't buffer anything -- it just always answers "here
+is what the counters say right now" when asked. If nobody ever scrapes
+it, the app behaves identically; it's just wasted potential.
+
+**2. The instrumentation library (OpenTelemetry) and the storage backend
+(Prometheus) are two separate, swappable things.** OpenTelemetry defines
+a vendor-neutral *API* (`Counter.add(...)`, `Histogram.record(...)`) that
+application code calls. A separate *exporter* decides what actually
+happens to those numbers -- render them as Prometheus text, ship them to
+Azure Monitor, print them to a file, whatever. Swap the exporter,
+instrumentation code doesn't change. This is the same API/implementation
+split Phase 3 leaned on for `contextvars` vs. plain globals, just at a
+different layer of the stack -- and it's why the OTel API is one of only
+two things (the other: stdlib `logging`) this codebase's own
+architectural rules let deeper layers depend on directly.
+
+### What this looked like, concretely
+
+Real output from `curl localhost:8000/metrics` after asking two
+questions, filtered to just this app's own instruments:
+
+```
+# TYPE itw_me_questions_total counter
+itw_me_questions_total{status="ok"} 2.0
+
+# TYPE itw_me_request_latency_seconds histogram
+itw_me_request_latency_seconds_bucket{le="0.005"} 1.0
+itw_me_request_latency_seconds_bucket{le="0.01"} 1.0
+...
+itw_me_request_latency_seconds_bucket{le="+Inf"} 2.0
+itw_me_request_latency_seconds_sum 0.000406...
+
+# TYPE itw_me_llm_input_tokens_total counter
+itw_me_llm_input_tokens_total 0.0
+```
+
+`status="ok"` is a *label* -- Prometheus's way of slicing one metric
+name into several time series (`status="ok"` vs `status="error"`),
+queryable independently or summed together. The histogram isn't one
+number, it's a set of "how many requests took ≤ this long" counts at
+several thresholds (its *buckets*) plus a running sum -- that's what
+lets a dashboard later compute "p95 latency" without the raw per-request
+numbers ever being stored anywhere.
+
+### A real mistake, caught by actually running it
+
+The first version of this exposed exactly the numbers above, except
+every single latency landed in the very first bucket, no matter how the
+request was timed. Cause: OpenTelemetry's *default* histogram bucket
+boundaries are `0, 5, 10, 25, 50, ... 10000` -- sensible if your value is
+in **milliseconds**, actively useless if it's in **seconds** (this
+codebase's own convention, hence every instrument being named
+`*_seconds`). A histogram with the wrong bucket boundaries doesn't
+error, doesn't warn, doesn't look wrong in any code review -- it just
+quietly produces numbers with zero useful resolution, forever, until
+someone happens to look at real output and notices every request "took
+less than 5 seconds," which is true and tells you nothing. The fix is
+one constructor argument (`explicit_bucket_boundaries_advisory`, a list
+of thresholds that actually spans the latencies you expect), but finding
+the problem at all required looking at real numbers, not just at
+whether the code ran without exceptions. Worth checking explicitly for
+VOLT's own histograms, whatever unit they end up in.
+
+### What this deliberately does not do
+
+- **It's not a replacement for Langfuse's token/cost tracking.** These
+  counters (`itw_me_llm_input_tokens_total`, etc.) answer "how many
+  tokens, in aggregate, across all traffic" -- a health/capacity
+  question. Langfuse answers "what did *this specific* call cost, with
+  what prompt" -- a debugging/analysis question. Same underlying numbers,
+  different shape of question.
+- **It's not tracing.** A histogram can tell you "retrieval got slower
+  this week"; it cannot tell you *which* request, or whether the
+  slowdown was in retrieval itself or in something it called. That's
+  Phase 5.
+- **Cardinality is a hard constraint, not a style preference.** Every
+  label value becomes its own stored time series. A `status` label with
+  two possible values (`ok`/`error`) is two time series, forever. A label
+  holding a user id, a question's text, or anything else effectively
+  unbounded would mean a new time series *per request*, which is exactly
+  the failure mode Prometheus calls "cardinality explosion" -- it degrades
+  or falls over, not gracefully, under exactly that pattern. Every label
+  used here comes from a small, fixed set on purpose.
+
+### Translating this to VOLT
+
+- VOLT's ticket already names the same six-ish categories of metric
+  (request count/latency, retrieval, LLM, tokens); the work is choosing
+  label sets for each that stay small and fixed -- `status`, maybe a
+  `workflow_step` enum, never anything free-text or per-user.
+- Whatever OTel setup VOLT ends up with, check every histogram it
+  defines against real observed latencies before calling it done.
+  Milliseconds vs. seconds is the specific bug found here, but the
+  general lesson -- default bucket boundaries are a guess, not a fact
+  about your service -- applies regardless of unit.
+- If VOLT already has *any* metrics pipeline (Azure Monitor's own metrics,
+  or an existing OTel setup), the swap-the-exporter property described
+  above is the thing to lean on: instrumentation code (counters,
+  histograms, what gets measured where) shouldn't need to change based
+  on which backend receives it.
 
 ## Phase 5 (VOLT's Step 3): distributed tracing
 

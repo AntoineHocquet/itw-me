@@ -7,7 +7,8 @@ beyond ~10 lines, something is leaking in.
 
 import uuid
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 from pydantic import BaseModel
 
 from itw_me.application.request_context import correlation_id_var
@@ -59,6 +60,25 @@ async def correlation_id_middleware(request: Request, call_next):
 
     response.headers["X-Correlation-Id"] = correlation_id
     return response
+
+
+@app.get("/metrics")
+def metrics_endpoint() -> Response:
+    """Phase 4, VOLT Step 2's "expose a Prometheus metrics endpoint."
+
+    Deliberately NOT `opentelemetry.exporter.prometheus`-specific code:
+    that package's whole job (see infrastructure/telemetry.py) is
+    registering itw-me's instruments with `prometheus_client`'s global
+    `REGISTRY` -- a *plain* Prometheus concept with no OTel involvement.
+    `generate_latest(REGISTRY)` renders whatever is currently registered
+    there (itw-me's six instruments, plus a few standard Python process
+    metrics prometheus_client adds for free) as the Prometheus text
+    exposition format. This route is the entire "server" side of a pull-
+    based metrics system: it does no polling, no batching, no pushing --
+    it just answers "what do the counters/histograms say right now"
+    whenever asked, which is all a Prometheus scrape ever does.
+    """
+    return Response(content=generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
 
 class AskRequest(BaseModel):

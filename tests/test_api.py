@@ -1,13 +1,16 @@
-"""Tests for the HTTP layer's correlation-id middleware.
+"""Tests for the HTTP layer: the correlation-id middleware, and the
+Phase 4 /metrics endpoint.
 
 This is the first test in this repo to go through `app` (FastAPI's
 TestClient drives real ASGI middleware, unlike calling InterviewService
 directly) -- which means importing itw_me.adapters.inbound.api here also
 triggers infrastructure/container.py's module-level configure_logging()
-call, same as running the real app would. That's intentional: it's the
-one place this test suite exercises the composition root's startup path
-end to end, with ITW_ME_FAKE_LLM defaulting to "1" (canned adapters), so
-it stays fully offline.
+AND configure_metrics() calls, same as running the real app would.
+That's intentional: it's the one place this test suite exercises the
+composition root's startup path end to end, with ITW_ME_FAKE_LLM
+defaulting to "1" (canned adapters), so it stays fully offline --
+configure_metrics() only wires up prometheus_client's in-process
+registry, no network call, no container, no real Prometheus needed.
 """
 
 import uuid
@@ -49,3 +52,26 @@ def test_correlation_id_context_does_not_leak_between_requests():
     client.post("/interviews", headers={"X-Correlation-Id": "should-not-leak"})
 
     assert correlation_id_var.get() is None
+
+
+def test_metrics_endpoint_exposes_this_apps_instruments_in_prometheus_format():
+    # Generate at least one data point first -- an instrument that has
+    # never recorded anything can be entirely absent from the exposition
+    # output (Prometheus's own docs call this out explicitly), so
+    # asserting on a freshly-imported app with zero traffic would be
+    # testing "does the app format prometheus_client's default process
+    # metrics," not "does OUR instrumentation actually show up."
+    interview_id = client.post("/interviews").json()["interview_id"]
+    client.post(f"/interviews/{interview_id}/questions", json={"text": "hi"})
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    body = response.text
+    # The Prometheus text exposition format is self-documenting: a
+    # "# TYPE <name> <kind>" line for every instrument. Checking for
+    # that line, not just the bare name, confirms this is a real metric
+    # definition and not, say, a stray substring inside a HELP comment.
+    assert "# TYPE itw_me_questions_total counter" in body
+    assert "# TYPE itw_me_request_latency_seconds histogram" in body

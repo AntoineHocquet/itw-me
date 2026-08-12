@@ -11,11 +11,18 @@ dependencies = [
     "chromadb",
     "openai",
     "python-dotenv",
-    # phase 3:
-    # "opentelemetry-api",
-    # "opentelemetry-sdk",
-    # "opentelemetry-instrumentation-fastapi",
-    # "opentelemetry-exporter-prometheus",
+    # phase 4: manual instrumentation only -- no
+    # opentelemetry-instrumentation-fastapi, since every instrument in
+    # this codebase is created and recorded by hand (see
+    # infrastructure/telemetry.py), not by an auto-instrumentation
+    # package patching FastAPI/httpx/etc. under the hood.
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-prometheus",
+    # api.py's /metrics route calls prometheus_client directly (not just
+    # transitively, via the exporter above) to render the exposition
+    # format -- listed explicitly since it's a real, direct import.
+    "prometheus-client",
 ]
 
 [project.optional-dependencies]

@@ -7,6 +7,8 @@ The first test passes already. The second is yours once
 InterviewService.ask_question is implemented.
 """
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from itw_me.adapters.outbound.repo_inmemory import InMemoryInterviewRepository
@@ -48,6 +50,16 @@ class InteractionIdSpyGenerator(AnswerGenerator):
     def generate(self, question: Question, context, history) -> Answer:
         self.seen_interaction_id = interaction_id_var.get()
         return Answer(text="ok", citations=())
+
+
+class RaisingGenerator(AnswerGenerator):
+    """A generator that always fails -- used to prove
+    itw_me_questions_total's status="error" path actually fires on an
+    adapter exception, not just on the interview-not-found path.
+    """
+
+    def generate(self, question: Question, context, history) -> Answer:
+        raise RuntimeError("the LLM is down")
 
 
 @pytest.fixture
@@ -107,3 +119,75 @@ def test_ask_question_unbinds_interaction_id_once_the_turn_ends():
     # without the `finally: interaction_id_var.reset(token)` in
     # ask_question, this would still read the just-finished turn's id.
     assert interaction_id_var.get() is None
+
+
+def test_ask_question_records_status_ok_on_success():
+    questions_total = MagicMock()
+    service = InterviewService(
+        retriever=FakeRetriever(),
+        generator=FakeGenerator(),
+        repository=InMemoryInterviewRepository(),
+        questions_total=questions_total,
+        request_latency_seconds=MagicMock(),
+    )
+    interview = service.start_interview()
+
+    service.ask_question(interview.id, "Where do you work?")
+
+    questions_total.add.assert_called_once_with(1, {"status": "ok"})
+
+
+def test_ask_question_records_status_error_when_the_interview_is_unknown():
+    questions_total = MagicMock()
+    request_latency_seconds = MagicMock()
+    service = InterviewService(
+        retriever=FakeRetriever(),
+        generator=FakeGenerator(),
+        repository=InMemoryInterviewRepository(),
+        questions_total=questions_total,
+        request_latency_seconds=request_latency_seconds,
+    )
+
+    with pytest.raises(ValueError):
+        service.ask_question("no-such-interview", "Where do you work?")
+
+    # The 404 case still counts and is still timed -- "end-to-end" means
+    # the whole method, including the not-found check at the very top,
+    # not just the happy path through retrieve/generate/record.
+    questions_total.add.assert_called_once_with(1, {"status": "error"})
+    request_latency_seconds.record.assert_called_once()
+
+
+def test_ask_question_records_status_error_when_generation_fails():
+    questions_total = MagicMock()
+    service = InterviewService(
+        retriever=FakeRetriever(),
+        generator=RaisingGenerator(),
+        repository=InMemoryInterviewRepository(),
+        questions_total=questions_total,
+        request_latency_seconds=MagicMock(),
+    )
+    interview = service.start_interview()
+
+    with pytest.raises(RuntimeError, match="the LLM is down"):
+        service.ask_question(interview.id, "Where do you work?")
+
+    questions_total.add.assert_called_once_with(1, {"status": "error"})
+
+
+def test_ask_question_records_end_to_end_latency():
+    request_latency_seconds = MagicMock()
+    service = InterviewService(
+        retriever=FakeRetriever(),
+        generator=FakeGenerator(),
+        repository=InMemoryInterviewRepository(),
+        questions_total=MagicMock(),
+        request_latency_seconds=request_latency_seconds,
+    )
+    interview = service.start_interview()
+
+    service.ask_question(interview.id, "Where do you work?")
+
+    request_latency_seconds.record.assert_called_once()
+    (elapsed,), _kwargs = request_latency_seconds.record.call_args
+    assert elapsed >= 0

@@ -74,10 +74,10 @@ Phase 3 (structured logging & correlation IDs):
 - [x] `trace_id`: reserved in every log line, always `null` until Phase 5
 
 Phase 4 (OpenTelemetry metrics + Prometheus endpoint):
-- [ ] OTel instrumentation: counter for questions, histograms for
+- [x] OTel instrumentation: counter for questions, histograms for
       end-to-end / retrieval / LLM latency, token counters
-- [ ] /metrics endpoint via the Prometheus exporter
-- [ ] Dockerfile + docker-compose `app` service so Prometheus has
+- [x] /metrics endpoint via the Prometheus exporter
+- [x] Dockerfile + docker-compose `app` service so Prometheus has
       something to scrape
 
 Phase 5 (distributed tracing):
@@ -132,6 +132,42 @@ lines per question (`retrieving corpus chunks` / `generating answer` /
 `recorded answer`) share that request's `correlation_id` and carry a
 per-turn `interaction_id`; `trace_id` is present but always `null` until
 Phase 5.
+
+## Running phase 4 (OpenTelemetry metrics + Prometheus)
+
+```bash
+uvicorn itw_me.adapters.inbound.api:app
+```
+
+```bash
+curl -s -X POST http://localhost:8000/interviews
+curl -s -X POST http://localhost:8000/interviews/<id>/questions \
+  -H 'Content-Type: application/json' -d '{"text": "Where do you work?"}'
+curl -s http://localhost:8000/metrics | grep itw_me_
+```
+
+That last line is the whole point: `itw_me_questions_total`,
+`itw_me_request_latency_seconds`, `itw_me_retrieval_latency_seconds`,
+`itw_me_llm_latency_seconds`, `itw_me_llm_input_tokens_total`, and
+`itw_me_llm_output_tokens_total`, all in the Prometheus text exposition
+format, with no Docker required to see them locally.
+
+With Docker (this is what actually gets scraped -- Prometheus can't
+reach a bare `uvicorn` process on your host from inside its own
+container):
+
+```bash
+docker compose up --build
+# then, in another terminal:
+curl -s -X POST http://localhost:8000/interviews
+curl -s -X POST http://localhost:8000/interviews/<id>/questions \
+  -H 'Content-Type: application/json' -d '{"text": "Where do you work?"}'
+```
+
+Then open `http://localhost:9090`, and query `itw_me_questions_total` --
+Prometheus's own UI plots it. `http://localhost:3000` (Grafana,
+admin/admin) is running too, but has nothing provisioned on it yet --
+that's Phase 6.
 
 ## Optional: Langfuse tracing
 

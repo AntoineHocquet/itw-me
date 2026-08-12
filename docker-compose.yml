@@ -1,16 +1,38 @@
-# Phase 3: the observability stack. This one file is worth studying:
+# Phase 3/4: the observability stack. This one file is worth studying:
 # it is a miniature of what an infra team deploys in Kubernetes.
-#
-# TODO(antoine): add an "app" service (build: ., port 8000) once the
-# API runs, then uncomment prometheus's dependency on it.
 
 services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"   # itw-me's own API + /metrics: http://localhost:8000
+    environment:
+      # Defaults match running `uvicorn` directly outside Docker: offline,
+      # canned adapters, no keys needed. Override any of these the same
+      # way you would outside Docker (e.g. `docker compose run -e
+      # ITW_ME_FAKE_LLM=0 ...`, or a `.env` file docker-compose picks up
+      # automatically) -- container.py reads the exact same variables
+      # either way, it has no idea it's in a container.
+      - ITW_ME_FAKE_LLM=${ITW_ME_FAKE_LLM:-1}
+      - ITW_ME_ENV=${ITW_ME_ENV:-dev}
+      - ITW_ME_LLM_BASE_URL=${ITW_ME_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      - ITW_ME_MODEL=${ITW_ME_MODEL:-llama3.1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-}
+
   prometheus:
     image: prom/prometheus:latest
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"   # Prometheus UI: http://localhost:9090
+    depends_on:
+      - app   # doesn't block prometheus.yml's scrape target existing;
+              # just means `docker compose up` starts app first, so the
+              # very first scrape attempt has something to hit rather
+              # than a few seconds of expected connection-refused.
 
   grafana:
     image: grafana/grafana:latest
@@ -18,6 +40,6 @@ services:
       - "3000:3000"   # Grafana UI: http://localhost:3000 (admin/admin)
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
-    # TODO: provision Prometheus as a datasource via
+    # TODO (Phase 6): provision Prometheus as a datasource via
     # ./observability/grafana/ provisioning files instead of clicking
-    # through the UI; that's the reproducible way.
+    # through the UI; that's the reproducible way. See phase6_spec.md.
